@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Options Journal · Live Underlying</title>
+<style>
+  :root{
+    --bg:#0a0d10;
+    --panel:#11151a;
+    --panel-2:#0e1216;
+    --line:#20262d;
+    --line-soft:#171c22;
+    --text:#e7ecf0;
+    --sub:#7c8994;
+    --sub-dim:#4d5860;
+    --green:#39c98f;
+    --green-dim:#1c4d3b;
+    --red:#f0566d;
+    --red-dim:#4d2029;
+    --amber:#e2a63f;
+    --blue:#5b9bd9;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', ui-monospace, Menlo, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{padding:20px 16px 60px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+
+  h1{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-0.01em;margin:0;}
+  .sub-line{color:var(--sub);font-size:13px;margin-top:3px;}
+
+  .header-row{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:24px;}
+  .stats-mini{display:flex;gap:20px;font-family:var(--mono);font-size:12px;color:var(--sub);}
+  .stats-mini span{color:var(--text);font-weight:600;margin-left:6px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;}
+  .kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--sub);font-weight:500;}
+  .kpi .value{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:6px;letter-spacing:-0.02em;}
+  .kpi .delta{font-size:12px;font-family:var(--mono);margin-top:4px;color:var(--sub);}
+  .green{color:var(--green);}
+  .red{color:var(--red);}
+  .amber{color:var(--amber);}
+  .blue{color:var(--blue);}
+
+  .section-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--sub);margin:0 0 10px 0;font-weight:500;}
+  .trade-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:13px;}
+  .trade-table th{background:var(--panel-2);color:var(--sub);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);}
+  .trade-table td{padding:12px 14px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:13px;}
+  .trade-table tr:last-child td{border-bottom:none;}
+  .trade-table tr:hover td{background:#161b21;}
+  .ticker{font-weight:600;color:var(--text);}
+  .sub-detail{color:var(--sub);font-size:11px;display:block;margin-top:2px;font-family:var(--sans);}
+  .badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;font-family:var(--mono);}
+  .badge.open{background:#1a2a3a;color:var(--blue);border:1px solid #253b4d;}
+  .badge.closed{background:#1a2520;color:var(--green);border:1px solid #234a39;}
+  .badge.expired{background:#2b2418;color:var(--amber);border:1px solid #493b20;}
+  .pnl-pos{color:var(--green);font-weight:600;}
+  .pnl-neg{color:var(--red);font-weight:600;}
+  .pnl-neutral{color:var(--sub);}
+
+  .underlying-price{color:var(--blue);font-weight:500;}
+  .underlying-price.loading{color:var(--sub-dim);font-style:italic;}
+  .underlying-price.error{color:var(--sub-dim);cursor:help;}
+  .underlying-chg{display:block;font-size:10px;margin-top:2px;font-family:var(--mono);color:var(--sub);}
+  .underlying-chg.chg-up{color:var(--green);}
+  .underlying-chg.chg-down{color:var(--red);}
+
+  .foot-note{margin-top:18px;font-size:12px;color:var(--sub-dim);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;}
+  .foot-note a{color:var(--sub);text-decoration:none;border-bottom:1px dotted var(--sub-dim);}
+  .foot-note a:hover{color:var(--text);}
+  .refresh-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--sub);font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:4px;cursor:pointer;}
+  .refresh-btn:hover{color:var(--text);border-color:var(--sub);}
+  .refresh-btn:disabled{opacity:0.45;cursor:default;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header-row">
+    <div>
+      <h1>Options Journal</h1>
+      <div class="sub-line">Live underlying prices via Alpha Vantage · options marks manual</div>
+    </div>
+    <div class="stats-mini">
+      <div>positions<span id="pos-count">0</span></div>
+      <div>win rate<span id="win-rate">—</span></div>
+      <div>avg hold<span>—</span></div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Net P&L</div>
+      <div class="value green" id="net-pnl">—</div>
+      <div class="delta" id="net-pnl-delta">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Open Risk</div>
+      <div class="value" id="open-risk">—</div>
+      <div class="delta" id="open-risk-delta">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Realized P&L</div>
+      <div class="value green" id="realized-pnl">—</div>
+      <div class="delta" id="realized-pnl-delta">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Unrealized P&L</div>
+      <div class="value red" id="unrealized-pnl">—</div>
+      <div class="delta" id="unrealized-pnl-delta">—</div>
+    </div>
+  </div>
+
+  <div class="section-label">Open positions</div>
+  <table class="trade-table" id="open-table">
+    <thead>
+      <tr>
+        <th>Contract</th>
+        <th>Underlying</th>
+        <th>Type</th>
+        <th>Strike</th>
+        <th>Expiry</th>
+        <th>Qty</th>
+        <th>Entry</th>
+        <th>Mark</th>
+        <th>P&L</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="open-body"></tbody>
+  </table>
+
+  <div class="section-label" style="margin-top:28px;">Recent activity</div>
+  <table class="trade-table" id="recent-table">
+    <thead>
+      <tr>
+        <th>Contract</th>
+        <th>Type</th>
+        <th>Strike</th>
+        <th>Closed</th>
+        <th>Qty</th>
+        <th>Entry</th>
+        <th>Exit</th>
+        <th>P&L</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="recent-body"></tbody>
+  </table>
+
+  <div class="foot-note">
+    <span>quotes updated <span id="timestamp">—</span></span>
+    <span>api calls today (this page) <span id="api-usage">0 / 25</span></span>
+    <span><button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes (uses one request per ticker)">↻ refresh quotes</button></span>
+  </div>
+</div>
+
+<script>
+  // ================= CONFIG =================
+  // ⚠️ Testing key — rotate at alphavantage.co when finished.
+  const API_KEY  = 'UHK46ZZ7UEKFQTLK';
+  const API_BASE = 'https://www.alphavantage.co/query';
+
+  const CACHE_TTL_MS  = 30 * 60 * 1000; // 30 min — reloading the page won't burn quota
+  const CACHE_PREFIX  = 'av_quote_';
+  const USAGE_KEY     = 'av_usage';
+  const DAILY_LIMIT   = 25;             // Alpha Vantage free tier, soft guide
+  const CALL_GAP_MS   = 1200;           // spacing between network calls (~5/min)
+
+  // ================= DATA =================
+  // Your four positions added below.
+  // Fields: ticker, type, strike, expiry (YYYY-MM-DD), qty, entry (premium),
+  //         mark (current premium — manual), status
+  const openPositions = [
+    { ticker:'GLXY', type:'Call', strike:20,   expiry:'2026-10-16', qty:4, entry:0.50,  mark:0.50,  status:'open' },
+    { ticker:'RKLB', type:'Call', strike:55,   expiry:'2026-10-16', qty:1, entry:1.80,  mark:1.80,  status:'open' },
+    { ticker:'SOFI', type:'Call', strike:16,   expiry:'2026-10-16', qty:5, entry:0.34,  mark:0.34,  status:'open' },
+    { ticker:'GLXY', type:'Call', strike:22,   expiry:'2026-09-18', qty:3, entry:0.40,  mark:0.40,  status:'open' }
+  ];
+
+  const recentTrades = [
+    // Add your closed trades here later, e.g.:
+    // { ticker:'NVDA', type:'Call', strike:920, expiry:'2025-05-30', qty:2, entry:18.20, exit:32.40, status:'closed' }
+  ];
+
+  // ================= HELPERS =================
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function calcPnl(entry, mark, qty){ return (mark - entry) * qty * 100; }
+
+  function formatPnl(val){
+    const abs = Math.abs(val).toFixed(2);
+    return `${val >= 0 ? '+' : '-'}$${abs}`;
+  }
+
+  function pnlClass(val){
+    if (val >  0.01) return 'pnl-pos';
+    if (val < -0.01) return 'pnl-neg';
+    return 'pnl-neutral';
+  }
+
+  function formatDate(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function badgeClass(status){
+    if (status === 'open')    return 'badge open';
+    if (status === 'closed')  return 'badge closed';
+    if (status === 'expired') return 'badge expired';
+    return 'badge';
+  }
+
+  function daysToExpiry(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    const diff = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff + 'd' : 'expired';
+  }
+
+  // ================= RENDER OPEN TABLE =================
+  document.getElementById('open-body').innerHTML = openPositions.map((p, idx) => {
+    const pnl = calcPnl(p.entry, p.mark, p.qty);
+    return `<tr>
+      <td><span class="ticker">${p.ticker}</span><span class="sub-detail">${p.type} ${p.strike} · ${daysToExpiry(p.expiry)}</span></td>
+      <td>
+        <span class="underlying-price loading" data-ticker="${p.ticker}" id="underlying-${idx}">—</span>
+        <span class="underlying-chg" data-ticker="${p.ticker}"></span>
+      </td>
+      <td>${p.type}</td>
+      <td>$${p.strike.toFixed(2)}</td>
+      <td>${formatDate(p.expiry)}</td>
+      <td>${p.qty}</td>
+      <td>$${p.entry.toFixed(2)}</td>
+      <td>$${p.mark.toFixed(2)}</td>
+      <td class="${pnlClass(pnl)}">${formatPnl(pnl)}</td>
+      <td><span class="${badgeClass(p.status)}">${p.status}</span></td>
+    </tr>`;
+  }).join('');
+
+  // ================= RENDER RECENT TABLE =================
+  const recentBody = document.getElementById('recent-body');
+  if (recentTrades.length === 0){
+    recentBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--sub-dim);padding:20px;">No closed trades yet.</td></tr>`;
+  } else {
+    recentBody.innerHTML = recentTrades.map(t => {
+      const pnl = calcPnl(t.entry, t.exit, t.qty);
+      return `<tr>
+        <td><span class="ticker">${t.ticker}</span><span class="sub-detail">${t.type} ${t.strike}</span></td>
+        <td>${t.type}</td>
+        <td>$${t.strike.toFixed(2)}</td>
+        <td>${formatDate(t.expiry)}</td>
+        <td>${t.qty}</td>
+        <td>$${t.entry.toFixed(2)}</td>
+        <td>$${t.exit.toFixed(2)}</td>
+        <td class="${pnlClass(pnl)}">${formatPnl(pnl)}</td>
+        <td><span class="${badgeClass(t.status)}">${t.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ================= KPIs =================
+  const openPnlSum = openPositions.reduce((a, p) => a + calcPnl(p.entry, p.mark, p.qty), 0);
+  const realizedSum = recentTrades
+    .filter(t => t.status === 'closed')
+    .reduce((a, t) => a + calcPnl(t.entry, t.exit, t.qty), 0);
+  const netPnl = realizedSum + openPnlSum;
+
+  const setKpi = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = formatPnl(val);
+    el.className = 'value ' + (val >= 0 ? 'green' : 'red');
+  };
+  setKpi('unrealized-pnl', openPnlSum);
+  setKpi('realized-pnl',   realizedSum);
+  setKpi('net-pnl',        netPnl);
+
+  // Deltas
+  document.getElementById('unrealized-pnl-delta').textContent = openPositions.length + ' open positions';
+  document.getElementById('realized-pnl-delta').textContent = recentTrades.filter(t => t.status === 'closed').length + ' closed trades';
+  document.getElementById('net-pnl-delta').textContent = 'realized + unrealized';
+
+  const openRisk = openPositions.reduce((a, p) => a + p.entry * p.qty * 100, 0);
+  document.getElementById('open-risk').textContent =
+    '$' + openRisk.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('open-risk-delta').textContent = openPositions.length + ' open positions';
+  document.getElementById('pos-count').textContent = openPositions.length;
+
+  const closed = recentTrades.filter(t => t.status === 'closed');
+  const wins   = closed.filter(t => t.exit > t.entry).length;
+  document.getElementById('win-rate').textContent =
+    (closed.length ? Math.round(wins / closed.length * 100) : 0) + '%';
+
+  // ================= QUOTE CACHE =================
+  function readCache(symbol){
+    try{
+      const raw = localStorage.getItem(CACHE_PREFIX + symbol);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj.t !== 'number') return null;
+      if (Date.now() - obj.t > CACHE_TTL_MS) return null;
+      return obj;
+    } catch(e){ return null; }
+  }
+
+  function writeCache(symbol, payload){
+    try{
+      localStorage.setItem(CACHE_PREFIX + symbol, JSON.stringify({ t: Date.now(), ...payload }));
+    } catch(e){ /* storage full / disabled — degrade silently */ }
+  }
+
+  function clearCache(){
+    const tickers = [...new Set(openPositions.map(p => p.ticker))];
+    tickers.forEach(t => {
+      try{ localStorage.removeItem(CACHE_PREFIX + t); }catch(e){}
+    });
+  }
+
+  // ================= USAGE COUNTER =================
+  function todayKey(){ return new Date().toISOString().slice(0, 10); }
+
+  let apiCalls = (() => {
+    try{
+      const raw = localStorage.getItem(USAGE_KEY);
+      if (!raw) return 0;
+      const obj = JSON.parse(raw);
+      return obj.date === todayKey() ? (obj.count || 0) : 0;
+    } catch(e){ return 0; }
+  })();
+
+  function renderUsage(){
+    const el = document.getElementById('api-usage');
+    if (!el) return;
+    el.textContent = `${apiCalls} / ${DAILY_LIMIT}`;
+    el.style.color = apiCalls >= DAILY_LIMIT ? 'var(--red)' : '';
+  }
+
+  function bumpUsage(){
+    apiCalls++;
+    try{
+      localStorage.setItem(USAGE_KEY, JSON.stringify({ date: todayKey(), count: apiCalls }));
+    } catch(e){}
+    renderUsage();
+  }
+
+  // ================= NETWORK =================
+  let rateLimited = false;
+
+  async function fetchQuoteNetwork(symbol){
+    if (rateLimited) return { error: 'rate-limit' };
+
+    const url = `${API_BASE}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${API_KEY}`;
+    bumpUsage();
+
+    try{
+      const resp = await fetch(url);
+      if (!resp.ok) return { error: 'http-' + resp.status };
+
+      const data = await resp.json();
+
+      // Alpha Vantage signals throttling via Note / Information
+      if (data['Note'] || data['Information']){
+        rateLimited = true;
+        return { error: 'rate-limit' };
+      }
+      if (data['Error Message']) return { error: 'invalid-symbol' };
+
+      const q = data['Global Quote'];
+      if (!q || !q['05. price']) return { error: 'no-data' };
+
+      return {
+        price:     parseFloat(q['05. price']),
+        change:    parseFloat(q['09. change']),
+        changePct: parseFloat(String(q['10. change percent'] || '0').replace('%', ''))
+      };
+    } catch(err){
+      return { error: 'network' };
+    }
+  }
+
+  // ================= DOM APPLICATION =================
+  function errorText(code){
+    return ({
+      'rate-limit':    'Alpha Vantage daily/min rate limit reached',
+      'invalid-symbol':'Symbol not recognised by Alpha Vantage',
+      'no-data':       'No quote data returned',
+      'network':       'Network error — check connection'
+    })[code] || 'Quote unavailable';
+  }
+
+  function applyQuote(ticker, result){
+    document.querySelectorAll(`.underlying-price[data-ticker="${ticker}"]`).forEach(el => {
+      el.classList.remove('loading');
+      if (result && result.price != null){
+        el.textContent = '$' + result.price.toFixed(2);
+        el.classList.remove('error');
+        el.removeAttribute('title');
+      } else {
+        el.textContent = 'n/a';
+        el.classList.add('error');
+        el.title = errorText(result && result.error);
+      }
+    });
+
+    document.querySelectorAll(`.underlying-chg[data-ticker="${ticker}"]`).forEach(el => {
+      if (result && result.changePct != null && !isNaN(result.changePct)){
+        const up = result.changePct >= 0;
+        el.textContent = (up ? '+' : '') + result.changePct.toFixed(2) + '%';
+        el.className = 'underlying-chg ' + (up ? 'chg-up' : 'chg-down');
+      } else {
+        el.textContent = '';
+        el.className = 'underlying-chg';
+      }
+    });
+  }
+
+  // ================= MAIN UPDATE =================
+  let isUpdating = false;
+
+  async function updateUnderlyingPrices({ force = false } = {}){
+    if (isUpdating) return;
+    isUpdating = true;
+
+    const btn = document.getElementById('refresh-quotes');
+    btn.disabled = true;
+
+    if (force) clearCache();
+
+    const tickers = [...new Set(openPositions.map(p => p.ticker))];
+    let usedNetwork = false;
+    let fromCacheCount = 0;
+
+    for (const ticker of tickers){
+      const cached = force ? null : readCache(ticker);
+      let result;
+
+      if (cached){
+        result = cached;
+        fromCacheCount++;
+      } else {
+        if (usedNetwork) await sleep(CALL_GAP_MS); // stay under ~5 calls/min
+        result = await fetchQuoteNetwork(ticker);
+        usedNetwork = true;
+        if (result && result.price != null) writeCache(ticker, result);
+      }
+
+      applyQuote(ticker, result);
+    }
+
+    const now = new Date();
+    const stamp = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('timestamp').textContent =
+      fromCacheCount === tickers.length ? `${stamp} (cached)` : stamp;
+
+    btn.disabled = false;
+    isUpdating = false;
+  }
+
+  // ================= INIT =================
+  renderUsage();
+  updateUnderlyingPrices();
+
+  document.getElementById('refresh-quotes').addEventListener('click', () => {
+    updateUnderlyingPrices({ force: true });
+  });
+</script>
+</body>
+</html>
