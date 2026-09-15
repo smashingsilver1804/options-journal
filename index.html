@@ -869,7 +869,7 @@
     isUpdating = true;
     const btn = document.getElementById('refresh-quotes');
     btn.disabled = true;
-    if (force) quoteCache.clear();
+    if (force) { quoteCache.clear(); rateLimited = false; }
 
     const tickers = [...new Set([...allTickers(), ...shareLots.map(l => l.ticker)])];
     let usedNetwork = false;
@@ -890,7 +890,12 @@
     }
 
     const stamp = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-    document.getElementById('timestamp').textContent = fromCacheCount === tickers.length && tickers.length ? `${stamp} (cached)` : stamp;
+    const stampEl = document.getElementById('timestamp');
+    if (rateLimited){
+      stampEl.textContent = `${stamp} — rate limited (Alpha Vantage free tier caps at 25/day, ~5/min). Click refresh to retry.`;
+    } else {
+      stampEl.textContent = fromCacheCount === tickers.length && tickers.length ? `${stamp} (cached)` : stamp;
+    }
     btn.disabled = false;
     isUpdating = false;
     renderLedgers(); // share-lot P&L depends on quotes
