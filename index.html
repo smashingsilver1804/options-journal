@@ -149,6 +149,12 @@
     </div>
     <div class="header-right">
       <span class="pos-count" id="pos-count">0</span> open across all strategies
+      <div style="margin-top:8px;">
+        <button class="btn" id="save-btn" title="Download all current data as a JSON file">↓ save</button>
+        <button class="btn" id="load-btn" title="Restore data from a previously saved JSON file">↑ load</button>
+        <input type="file" id="load-input" accept="application/json" style="display:none;">
+      </div>
+      <div style="margin-top:4px;font-size:10.5px;color:var(--silver-faint);" id="autosave-status">—</div>
     </div>
   </div>
 
@@ -312,7 +318,7 @@
     <button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes">↻ refresh quotes</button>
   </div>
   <div class="foot-note" style="border-top:none;padding-top:0;">
-    <span class="note">Everything lives in memory for this session only — Claude artifacts can't use browser storage, so all positions, balances and quotes reset on reload. Host the file yourself if you want it to persist.</span>
+    <span class="note">Autosaves to your browser automatically once this is hosted for real (e.g. on GitHub Pages) — Claude's own artifact preview blocks that, so <b>save</b>/<b>load</b> still work everywhere as a manual backup.</span>
   </div>
 
 </div>
@@ -324,6 +330,7 @@
   const CACHE_TTL_MS = 30 * 60 * 1000;
   const DAILY_LIMIT  = 25;
   const CALL_GAP_MS  = 1200;
+  const STORAGE_KEY  = 'options-journal-state-v1';
 
   // ================= STATE (in-memory only) =================
   let startingBalance = 20000;
@@ -528,6 +535,16 @@
     document.getElementById('pos-count').textContent = longs.length + csps.length + ccs.length;
   }
 
+  function autosave(){
+    const el = document.getElementById('autosave-status');
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
+      if (el) el.textContent = 'autosaved ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    } catch(e){
+      if (el) el.textContent = 'autosave unavailable here — use save/load';
+    }
+  }
+
   function renderAll(){
     renderLong();
     renderCsp();
@@ -537,6 +554,7 @@
     renderLedgers();
     attachRowHandlers();
     updateUnderlyingPrices();
+    autosave();
   }
 
   // ================= LIST LOOKUP =================
@@ -819,9 +837,67 @@
 
   document.getElementById('refresh-quotes').addEventListener('click', () => updateUnderlyingPrices({ force:true }));
 
+  // ================= SAVE / LOAD (file-based, since artifacts can't use browser storage) =================
+  function collectState(){
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      startingBalance, longs, csps, ccs, shareLots, recentTrades, nextId
+    };
+  }
+
+  function applyState(data){
+    if (!data || typeof data !== 'object') { alert('That file doesn\'t look like a saved journal.'); return; }
+    startingBalance = typeof data.startingBalance === 'number' ? data.startingBalance : startingBalance;
+    longs = Array.isArray(data.longs) ? data.longs : [];
+    csps = Array.isArray(data.csps) ? data.csps : [];
+    ccs = Array.isArray(data.ccs) ? data.ccs : [];
+    shareLots = Array.isArray(data.shareLots) ? data.shareLots : [];
+    recentTrades = Array.isArray(data.recentTrades) ? data.recentTrades : [];
+    nextId = typeof data.nextId === 'number' ? data.nextId : nextId;
+    quoteCache.clear();
+    renderAll();
+  }
+
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(collectState(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `options-journal-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  const loadInput = document.getElementById('load-input');
+  document.getElementById('load-btn').addEventListener('click', () => loadInput.click());
+  loadInput.addEventListener('change', () => {
+    const file = loadInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        applyState(JSON.parse(reader.result));
+      } catch(e){
+        alert('Couldn\'t read that file — is it a JSON file saved from this journal?');
+      }
+    };
+    reader.readAsText(file);
+    loadInput.value = '';
+  });
+
   // ================= INIT =================
   document.getElementById('api-usage').textContent = `0 / ${DAILY_LIMIT}`;
-  renderAll();
+  (function tryRestore(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { applyState(JSON.parse(raw)); return; }
+    } catch(e){ /* storage blocked (e.g. inside Claude's artifact preview) — fall back to seed data */ }
+    renderAll();
+  })();
 </script>
 </body>
 </html>
