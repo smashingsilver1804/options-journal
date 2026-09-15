@@ -174,6 +174,11 @@
       <div class="value" id="ytd-pnl">—</div>
       <div class="sub" id="ytd-pct">—</div>
     </div>
+    <div class="ledger-item">
+      <div class="label">Dividends &amp; interest</div>
+      <div class="value" id="div-total">—</div>
+      <div class="sub" id="div-sub">—</div>
+    </div>
   </div>
 
   <div class="ledger-group-label">All strategies</div>
@@ -198,6 +203,29 @@
       <div class="value" id="unrealized-pnl">—</div>
       <div class="sub" id="unrealized-sub">—</div>
     </div>
+  </div>
+
+  <!-- ============ DIVIDENDS & INTEREST ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Dividends &amp; interest</h2>
+    <span class="count" id="div-count-label"></span>
+  </div>
+  <div class="section-note">Log every payout as it lands — money market interest on cash backing your CSPs, stock dividends, whatever shows up.</div>
+  <div class="table-frame">
+    <table id="div-table">
+      <thead><tr><th>Date</th><th>Source</th><th>Amount</th><th></th></tr></thead>
+      <tbody id="div-body"></tbody>
+    </table>
+  </div>
+  <div class="add-toggle"><button class="btn" id="div-add-toggle">+ add payout</button></div>
+  <div class="add-panel" id="div-add-panel">
+    <div class="add-grid lots">
+      <div class="field"><label>Date</label><input id="div-date" type="date"></div>
+      <div class="field"><label>Source</label><input id="div-source" placeholder="money market interest"></div>
+      <div class="field"><label>Amount</label><input id="div-amount" type="number" step="0.01" placeholder="12.40"></div>
+      <div class="field"><button class="btn primary" id="div-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="div-add-error">Fill in date and amount.</div>
   </div>
 
   <!-- ============ LONG OPTIONS ============ -->
@@ -333,7 +361,7 @@
   const STORAGE_KEY  = 'options-journal-state-v1';
 
   // ================= STATE (in-memory only) =================
-  let startingBalance = 20000;
+  let startingBalance = 25000;
 
   let longs = [
     { id:1, ticker:'GLXY', type:'Call', strike:20, expiry:'2026-10-16', qty:4, entry:0.50, mark:0.50 },
@@ -344,6 +372,7 @@
   let csps = [];
   let ccs = [];
   let shareLots = [];   // { id, ticker, shares, basis, source }
+  let dividends = [];   // { id, date, source, amount }
   let recentTrades = []; // { ticker,type,strike,expiry,qty,entry,exit,closedOn,status,kind }
   let nextId = 100;
 
@@ -440,6 +469,28 @@
     document.getElementById('cc-count-label').textContent = ccs.length + ' position' + (ccs.length===1?'':'s');
   }
 
+  function renderDividends(){
+    const body = document.getElementById('div-body');
+    document.getElementById('div-count-label').textContent = dividends.length + ' payout' + (dividends.length===1?'':'s');
+    if (dividends.length === 0){
+      body.innerHTML = `<tr class="empty-row"><td colspan="4">Nothing logged yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = dividends.slice().reverse().map(d => `
+      <tr>
+        <td data-label="Date">${formatDate(d.date)}</td>
+        <td data-label="Source">${d.source || '—'}</td>
+        <td data-label="Amount"><span class="pnl pos">+$${d.amount.toFixed(2)}</span></td>
+        <td class="actions" data-label=""><button class="btn danger ghost div-del-btn" data-id="${d.id}">delete</button></td>
+      </tr>`).join('');
+    body.querySelectorAll('.div-del-btn').forEach(el => {
+      el.addEventListener('click', () => {
+        dividends = dividends.filter(d => d.id !== parseInt(el.dataset.id));
+        renderAll();
+      });
+    });
+  }
+
   function renderLots(){
     const panel = document.getElementById('lots-panel');
     if (shareLots.length === 0){
@@ -511,7 +562,8 @@
     }, 0);
 
     const netPnl = realized + unrealized;
-    const ytd = netPnl + sharePnl;
+    const dividendsTotal = dividends.reduce((a,d) => a + d.amount, 0);
+    const ytd = netPnl + sharePnl + dividendsTotal;
     const accountValue = startingBalance + ytd;
 
     const setVal = (id, val) => {
@@ -531,6 +583,8 @@
     document.getElementById('realized-sub').textContent = recentTrades.length + ' closed';
     document.getElementById('unrealized-sub').textContent = (longs.length+csps.length+ccs.length) + ' open';
     document.getElementById('ytd-pct').textContent = startingBalance > 0 ? (ytd/startingBalance*100 >= 0 ? '+' : '') + (ytd/startingBalance*100).toFixed(1) + '% of starting balance' : '—';
+    document.getElementById('div-total').textContent = '+$' + dividendsTotal.toFixed(2);
+    document.getElementById('div-sub').textContent = dividends.length + ' payout' + (dividends.length===1?'':'s') + ' logged';
 
     document.getElementById('pos-count').textContent = longs.length + csps.length + ccs.length;
   }
@@ -550,6 +604,7 @@
     renderCsp();
     renderCc();
     renderLots();
+    renderDividends();
     renderRecent();
     renderLedgers();
     attachRowHandlers();
@@ -708,6 +763,7 @@
       fieldIds.forEach(([key, id, kind]) => {
         const raw = document.getElementById(id).value;
         if (kind === 'text') { vals[key] = raw.trim().toUpperCase(); if (!vals[key]) ok = false; }
+        else if (kind === 'opt') { vals[key] = raw.trim(); }
         else if (kind === 'select') { vals[key] = raw; }
         else if (kind === 'date') { vals[key] = raw; if (!raw) ok = false; }
         else { vals[key] = parseFloat(raw); if (isNaN(vals[key]) || (kind==='qty' && vals[key] <= 0) || (kind==='num' && vals[key] < 0)) ok = false; }
@@ -716,7 +772,7 @@
       if (!ok){ errEl.style.display = 'block'; return; }
       errEl.style.display = 'none';
       const arr = build(vals);
-      fieldIds.forEach(([,id]) => { const f = document.getElementById(id); if (f.tagName==='INPUT') f.value=''; });
+      fieldIds.forEach(([,id,kind]) => { const f = document.getElementById(id); if (f.tagName==='INPUT' && kind !== 'date') f.value=''; });
       panel.classList.remove('open');
       renderAll();
     });
@@ -740,6 +796,11 @@
   wireAddForm('lot-add-toggle','lot-add-panel','lot-add-confirm','lot-add-error',
     [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
     v => { shareLots.push({ id: nextId++, ticker:v.ticker, shares:v.shares, basis:v.basis, source:'manual' }); });
+
+  document.getElementById('div-date').value = new Date().toISOString().slice(0,10);
+  wireAddForm('div-add-toggle','div-add-panel','div-add-confirm','div-add-error',
+    [['date','div-date','date'],['source','div-source','opt'],['amount','div-amount','num']],
+    v => { dividends.push({ id: nextId++, date:v.date, source:v.source, amount:v.amount }); });
 
   // ================= QUOTES =================
   function bumpUsage(){
@@ -842,7 +903,7 @@
     return {
       version: 1,
       savedAt: new Date().toISOString(),
-      startingBalance, longs, csps, ccs, shareLots, recentTrades, nextId
+      startingBalance, longs, csps, ccs, shareLots, dividends, recentTrades, nextId
     };
   }
 
@@ -853,6 +914,7 @@
     csps = Array.isArray(data.csps) ? data.csps : [];
     ccs = Array.isArray(data.ccs) ? data.ccs : [];
     shareLots = Array.isArray(data.shareLots) ? data.shareLots : [];
+    dividends = Array.isArray(data.dividends) ? data.dividends : [];
     recentTrades = Array.isArray(data.recentTrades) ? data.recentTrades : [];
     nextId = typeof data.nextId === 'number' ? data.nextId : nextId;
     quoteCache.clear();
