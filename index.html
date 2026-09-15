@@ -3,390 +3,760 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Options Journal · Live Underlying</title>
+<title>Options Journal</title>
 <style>
   :root{
-    --bg:#0a0d10;
-    --panel:#11151a;
-    --panel-2:#0e1216;
-    --line:#20262d;
-    --line-soft:#171c22;
-    --text:#e7ecf0;
-    --sub:#7c8994;
-    --sub-dim:#4d5860;
-    --green:#39c98f;
-    --green-dim:#1c4d3b;
-    --red:#f0566d;
-    --red-dim:#4d2029;
-    --amber:#e2a63f;
-    --blue:#5b9bd9;
-    --mono: 'IBM Plex Mono', 'SFMono-Regular', ui-monospace, Menlo, monospace;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --bg:#f6f6f4;
+    --panel:#ffffff;
+    --panel-2:#eeeeec;
+    --line:#dcdcd9;
+    --line-soft:#e8e8e5;
+    --ink:#17181a;
+    --silver:#54575c;
+    --silver-dim:#797c80;
+    --silver-faint:#a2a5a8;
+    --white:#0a0a0b;
+    --mono:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+    --sans:'Neue Haas Grotesk','Helvetica Neue',Arial,sans-serif;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
-  body{padding:20px 16px 60px;}
-  .wrap{max-width:1100px;margin:0 auto;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+  body{padding:36px 28px 70px;}
+  .wrap{max-width:1120px;margin:0 auto;}
+  ::selection{background:var(--silver);color:#fff;}
 
-  h1{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-0.01em;margin:0;}
-  .sub-line{color:var(--sub);font-size:13px;margin-top:3px;}
+  /* ---------- header ---------- */
+  .header-row{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line);margin-bottom:26px;}
+  h1{font-family:var(--sans);font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0;color:var(--white);}
+  .sub-line{color:var(--silver-dim);font-size:13px;margin-top:5px;font-weight:400;}
+  .header-right{text-align:right;font-family:var(--mono);font-size:12px;color:var(--silver-dim);}
+  .header-right .pos-count{color:var(--white);font-weight:600;}
 
-  .header-row{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:24px;}
-  .stats-mini{display:flex;gap:20px;font-family:var(--mono);font-size:12px;color:var(--sub);}
-  .stats-mini span{color:var(--text);font-weight:600;margin-left:6px;}
+  /* ---------- ledger strip (kpis) ---------- */
+  .ledger{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px;background:var(--panel);}
+  .ledger-item{flex:1;padding:16px 20px;border-right:1px solid var(--line);}
+  .ledger-item:last-child{border-right:none;}
+  .ledger-item .label{font-size:12px;color:var(--silver-dim);font-weight:400;}
+  .ledger-item .value{font-family:var(--mono);font-size:21px;font-weight:600;margin-top:7px;letter-spacing:-0.01em;color:var(--white);}
+  .ledger-item .value.dim{color:var(--silver-faint);font-weight:500;}
+  .ledger-item .sub{font-family:var(--mono);font-size:11px;color:var(--silver-faint);margin-top:5px;}
+  .ledger-item.editable .value{cursor:text;border-bottom:1px dotted var(--silver-faint);display:inline-block;}
+  .ledger-item.editable .value:hover{color:var(--silver);}
+  .ledger-input{width:120px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--mono);font-size:19px;font-weight:600;padding:3px 6px;border-radius:2px;margin-top:5px;}
+  .ledger-group-label{font-family:var(--sans);font-size:11px;color:var(--silver-faint);margin:0 0 8px 2px;}
 
-  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;}
-  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;}
-  .kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--sub);font-weight:500;}
-  .kpi .value{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:6px;letter-spacing:-0.02em;}
-  .kpi .delta{font-size:12px;font-family:var(--mono);margin-top:4px;color:var(--sub);}
-  .green{color:var(--green);}
-  .red{color:var(--red);}
-  .amber{color:var(--amber);}
-  .blue{color:var(--blue);}
+  /* ---------- section header ---------- */
+  .section-head{display:flex;align-items:baseline;gap:9px;margin:38px 0 12px 0;}
+  .section-head .tick{width:3px;height:13px;background:var(--silver-dim);display:inline-block;}
+  .section-head h2{font-size:14px;font-weight:600;color:var(--ink);margin:0;}
+  .section-head .tag{font-family:var(--mono);font-size:10.5px;color:var(--silver-faint);border:1px solid var(--line);border-radius:2px;padding:1px 6px;}
+  .section-head .count{font-family:var(--mono);font-size:12px;color:var(--silver-faint);margin-left:auto;}
+  .section-note{font-size:12px;color:var(--silver-dim);margin:-6px 0 14px 12px;}
 
-  .section-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--sub);margin:0 0 10px 0;font-weight:500;}
-  .trade-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:13px;}
-  .trade-table th{background:var(--panel-2);color:var(--sub);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);}
-  .trade-table td{padding:12px 14px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:13px;}
-  .trade-table tr:last-child td{border-bottom:none;}
-  .trade-table tr:hover td{background:#161b21;}
-  .ticker{font-weight:600;color:var(--text);}
-  .sub-detail{color:var(--sub);font-size:11px;display:block;margin-top:2px;font-family:var(--sans);}
-  .badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;font-family:var(--mono);}
-  .badge.open{background:#1a2a3a;color:var(--blue);border:1px solid #253b4d;}
-  .badge.closed{background:#1a2520;color:var(--green);border:1px solid #234a39;}
-  .badge.expired{background:#2b2418;color:var(--amber);border:1px solid #493b20;}
-  .pnl-pos{color:var(--green);font-weight:600;}
-  .pnl-neg{color:var(--red);font-weight:600;}
-  .pnl-neutral{color:var(--sub);}
+  /* ---------- table ---------- */
+  table{width:100%;border-collapse:collapse;}
+  .table-frame{border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--panel);}
+  th{background:var(--panel-2);color:var(--silver-dim);font-weight:500;font-size:11.5px;text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);letter-spacing:0.01em;}
+  td{padding:11px 13px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:13px;vertical-align:middle;color:var(--ink);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:#f1f1ef;}
+  .ticker{font-weight:600;color:var(--white);font-size:13.5px;}
+  .contract-sub{color:var(--silver-faint);font-size:11px;display:block;margin-top:2px;font-family:var(--sans);}
+  .contract-sub.urgent{color:var(--silver);font-weight:600;border-bottom:1px solid var(--silver-dim);display:inline-block;}
 
-  .underlying-price{color:var(--blue);font-weight:500;}
-  .underlying-price.loading{color:var(--sub-dim);font-style:italic;}
-  .underlying-price.error{color:var(--sub-dim);cursor:help;}
-  .underlying-chg{display:block;font-size:10px;margin-top:2px;font-family:var(--mono);color:var(--sub);}
-  .underlying-chg.chg-up{color:var(--green);}
-  .underlying-chg.chg-down{color:var(--red);}
+  .underlying-price{color:var(--silver);font-weight:500;}
+  .underlying-price.loading{color:var(--silver-faint);font-style:italic;}
+  .underlying-price.err{color:var(--silver-faint);cursor:help;text-decoration:underline dotted;}
+  .underlying-chg{display:block;font-size:10.5px;margin-top:2px;font-family:var(--mono);color:var(--silver-faint);}
+  .underlying-chg.up{color:var(--white);}
+  .underlying-chg.down{color:var(--silver-faint);}
 
-  .foot-note{margin-top:18px;font-size:12px;color:var(--sub-dim);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;}
-  .foot-note a{color:var(--sub);text-decoration:none;border-bottom:1px dotted var(--sub-dim);}
-  .foot-note a:hover{color:var(--text);}
-  .refresh-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--sub);font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:4px;cursor:pointer;}
-  .refresh-btn:hover{color:var(--text);border-color:var(--sub);}
-  .refresh-btn:disabled{opacity:0.45;cursor:default;}
+  .pnl{font-weight:600;}
+  .pnl.pos{color:var(--white);}
+  .pnl.neg{color:var(--silver-dim);}
+  .pnl.flat{color:var(--silver-faint);font-weight:400;}
+
+  .status-dot{font-size:10px;margin-right:6px;}
+  .status-row{display:flex;align-items:center;font-size:12px;color:var(--silver-dim);white-space:nowrap;}
+  .status-row.st-open .status-dot{color:var(--white);}
+  .status-row.st-closed .status-dot{color:var(--silver-dim);}
+  .status-row.st-expired .status-dot{color:var(--silver-faint);}
+  .status-row.st-assigned .status-dot{color:var(--white);}
+  .status-row.st-called_away .status-dot{color:var(--white);}
+
+  .mark-cell{cursor:text;border-bottom:1px dotted var(--silver-faint);}
+  .mark-cell:hover{color:var(--white);}
+  .mark-input{width:64px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--mono);font-size:13px;padding:3px 5px;border-radius:2px;}
+
+  .actions{white-space:nowrap;}
+  .btn{font-family:var(--sans);font-size:11.5px;padding:5px 10px;border-radius:2px;border:1px solid var(--line);background:transparent;color:var(--silver-dim);cursor:pointer;margin-right:6px;margin-bottom:4px;}
+  .btn:hover{color:var(--white);border-color:var(--silver-dim);}
+  .btn.danger:hover{color:var(--white);border-color:var(--silver);}
+  .btn.primary{background:var(--silver);color:#fff;border-color:var(--silver);font-weight:600;}
+  .btn.primary:hover{background:var(--white);}
+  .btn.ghost{border-color:transparent;color:var(--silver-faint);}
+  .btn.ghost:hover{color:var(--silver);}
+  .inline-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .inline-form input{width:70px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--mono);font-size:12.5px;padding:4px 6px;border-radius:2px;}
+
+  .empty-row td{text-align:center;color:var(--silver-faint);padding:26px;font-family:var(--sans);font-size:13px;}
+
+  /* ---------- add position ---------- */
+  .add-toggle{margin:14px 0 32px;}
+  .add-panel{border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:16px 18px;margin:14px 0 32px;display:none;}
+  .add-panel.open{display:block;}
+  .add-grid{display:grid;grid-template-columns:repeat(6,1fr) auto;gap:10px;align-items:end;}
+  .add-grid.lots{grid-template-columns:repeat(3,1fr) auto;}
+  .field label{display:block;font-size:10.5px;color:var(--silver-faint);margin-bottom:5px;}
+  .field select,.field input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:12.5px;padding:7px 8px;border-radius:2px;}
+  .field select:focus,.field input:focus{outline:none;border-color:var(--silver-dim);}
+  .add-error{color:var(--silver);font-size:11.5px;margin-top:10px;font-family:var(--sans);display:none;}
+
+  /* ---------- share lots ---------- */
+  .lots-panel{border:1px solid var(--line);border-radius:3px;background:var(--panel);margin-bottom:16px;}
+  .lots-panel .lot-row{display:flex;align-items:center;gap:16px;padding:10px 14px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:13px;}
+  .lots-panel .lot-row:last-child{border-bottom:none;}
+  .lots-panel .lot-row .lt{color:var(--white);font-weight:600;min-width:56px;}
+  .lots-panel .lot-row .ls{color:var(--silver-dim);flex:1;}
+  .lots-panel .lot-row .src{font-family:var(--sans);font-size:10.5px;color:var(--silver-faint);border:1px solid var(--line);border-radius:2px;padding:1px 6px;}
+
+  /* ---------- footer ---------- */
+  .foot-note{margin-top:22px;font-size:11.5px;color:var(--silver-faint);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:16px;}
+  .foot-note .note{max-width:520px;color:var(--silver-faint);}
+  .refresh-btn{background:transparent;border:1px solid var(--line);color:var(--silver-dim);font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:2px;cursor:pointer;}
+  .refresh-btn:hover{color:var(--white);border-color:var(--silver-dim);}
+  .refresh-btn:disabled{opacity:0.4;cursor:default;}
+
+  @media (max-width:720px){
+    .ledger{flex-wrap:wrap;}
+    .ledger-item{flex:1 1 50%;border-bottom:1px solid var(--line);}
+    .add-grid,.add-grid.lots{grid-template-columns:1fr 1fr;}
+    table,thead,tbody,tr{display:block;}
+    thead{display:none;}
+    tbody tr{border-bottom:1px solid var(--line);padding:10px 0;}
+    td{display:flex;justify-content:space-between;border:none;padding:5px 13px;}
+    td::before{content:attr(data-label);color:var(--silver-faint);font-family:var(--sans);font-size:11px;}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <div class="header-row">
     <div>
       <h1>Options Journal</h1>
-      <div class="sub-line">Live underlying prices via Alpha Vantage · options marks manual</div>
+      <div class="sub-line">Underlying quotes via Alpha Vantage · marks entered manually</div>
     </div>
-    <div class="stats-mini">
-      <div>positions<span id="pos-count">0</span></div>
-      <div>win rate<span id="win-rate">—</span></div>
-      <div>avg hold<span>—</span></div>
+    <div class="header-right">
+      <span class="pos-count" id="pos-count">0</span> open across all strategies
     </div>
   </div>
 
-  <div class="kpi-grid">
-    <div class="kpi">
+  <div class="ledger-group-label">Account</div>
+  <div class="ledger">
+    <div class="ledger-item editable">
+      <div class="label">Starting balance</div>
+      <span class="value" id="starting-balance">—</span>
+    </div>
+    <div class="ledger-item">
+      <div class="label">Account value</div>
+      <div class="value" id="account-value">—</div>
+      <div class="sub">starting balance + net P&amp;L</div>
+    </div>
+    <div class="ledger-item">
+      <div class="label">Year to date</div>
+      <div class="value" id="ytd-pnl">—</div>
+      <div class="sub" id="ytd-pct">—</div>
+    </div>
+  </div>
+
+  <div class="ledger-group-label">All strategies</div>
+  <div class="ledger" style="margin-bottom:0;">
+    <div class="ledger-item">
       <div class="label">Net P&L</div>
-      <div class="value green" id="net-pnl">—</div>
-      <div class="delta" id="net-pnl-delta">—</div>
+      <div class="value" id="net-pnl">—</div>
+      <div class="sub">realized + unrealized</div>
     </div>
-    <div class="kpi">
-      <div class="label">Open Risk</div>
-      <div class="value" id="open-risk">—</div>
-      <div class="delta" id="open-risk-delta">—</div>
+    <div class="ledger-item">
+      <div class="label">Capital deployed</div>
+      <div class="value dim" id="open-risk">—</div>
+      <div class="sub" id="open-risk-sub">—</div>
     </div>
-    <div class="kpi">
-      <div class="label">Realized P&L</div>
-      <div class="value green" id="realized-pnl">—</div>
-      <div class="delta" id="realized-pnl-delta">—</div>
+    <div class="ledger-item">
+      <div class="label">Realized</div>
+      <div class="value" id="realized-pnl">—</div>
+      <div class="sub" id="realized-sub">—</div>
     </div>
-    <div class="kpi">
-      <div class="label">Unrealized P&L</div>
-      <div class="value red" id="unrealized-pnl">—</div>
-      <div class="delta" id="unrealized-pnl-delta">—</div>
+    <div class="ledger-item">
+      <div class="label">Unrealized</div>
+      <div class="value" id="unrealized-pnl">—</div>
+      <div class="sub" id="unrealized-sub">—</div>
     </div>
   </div>
 
-  <div class="section-label">Open positions</div>
-  <table class="trade-table" id="open-table">
-    <thead>
-      <tr>
-        <th>Contract</th>
-        <th>Underlying</th>
-        <th>Type</th>
-        <th>Strike</th>
-        <th>Expiry</th>
-        <th>Qty</th>
-        <th>Entry</th>
-        <th>Mark</th>
-        <th>P&L</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="open-body"></tbody>
-  </table>
+  <!-- ============ LONG OPTIONS ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Long options</h2><span class="tag">bought</span>
+    <span class="count" id="long-count-label"></span>
+  </div>
+  <div class="table-frame">
+    <table id="long-table">
+      <thead><tr>
+        <th>Contract</th><th>Underlying</th><th>Strike</th><th>Expiry</th><th>Qty</th>
+        <th>Entry</th><th>Mark</th><th>P&L</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="long-body"></tbody>
+    </table>
+  </div>
+  <div class="add-toggle"><button class="btn" id="long-add-toggle">+ add long position</button></div>
+  <div class="add-panel" id="long-add-panel">
+    <div class="add-grid">
+      <div class="field"><label>Ticker</label><input id="long-ticker" placeholder="AAPL" maxlength="8"></div>
+      <div class="field"><label>Type</label><select id="long-type"><option>Call</option><option>Put</option></select></div>
+      <div class="field"><label>Strike</label><input id="long-strike" type="number" step="0.5" placeholder="150"></div>
+      <div class="field"><label>Expiry</label><input id="long-expiry" type="date"></div>
+      <div class="field"><label>Qty</label><input id="long-qty" type="number" step="1" placeholder="1"></div>
+      <div class="field"><label>Entry premium</label><input id="long-entry" type="number" step="0.01" placeholder="1.20"></div>
+      <div class="field"><button class="btn primary" id="long-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="long-add-error">Fill in ticker, strike, expiry, qty and entry.</div>
+  </div>
 
-  <div class="section-label" style="margin-top:28px;">Recent activity</div>
-  <table class="trade-table" id="recent-table">
-    <thead>
-      <tr>
-        <th>Contract</th>
-        <th>Type</th>
-        <th>Strike</th>
-        <th>Closed</th>
-        <th>Qty</th>
-        <th>Entry</th>
-        <th>Exit</th>
-        <th>P&L</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="recent-body"></tbody>
-  </table>
+  <!-- ============ CASH-SECURED PUTS ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Cash-secured puts</h2><span class="tag">sold</span>
+    <span class="count" id="csp-count-label"></span>
+  </div>
+  <div class="section-note">Assigning a put moves it to Recent activity and adds a share lot below, ready for a covered call.</div>
+  <div class="table-frame">
+    <table id="csp-table">
+      <thead><tr>
+        <th>Contract</th><th>Underlying</th><th>Strike</th><th>Expiry</th><th>Qty</th>
+        <th>Collateral</th><th>Entry</th><th>Mark</th><th>P&L</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="csp-body"></tbody>
+    </table>
+  </div>
+  <div class="add-toggle"><button class="btn" id="csp-add-toggle">+ sell cash-secured put</button></div>
+  <div class="add-panel" id="csp-add-panel">
+    <div class="add-grid">
+      <div class="field"><label>Ticker</label><input id="csp-ticker" placeholder="AAPL" maxlength="8"></div>
+      <div class="field"><label>Strike</label><input id="csp-strike" type="number" step="0.5" placeholder="95"></div>
+      <div class="field"><label>Expiry</label><input id="csp-expiry" type="date"></div>
+      <div class="field"><label>Qty (contracts)</label><input id="csp-qty" type="number" step="1" placeholder="1"></div>
+      <div class="field"><label>Premium received</label><input id="csp-entry" type="number" step="0.01" placeholder="1.10"></div>
+      <div class="field"></div>
+      <div class="field"><button class="btn primary" id="csp-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="csp-add-error">Fill in ticker, strike, expiry, qty and premium.</div>
+  </div>
+
+  <!-- ============ COVERED CALLS ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Covered calls</h2><span class="tag">sold</span>
+    <span class="count" id="cc-count-label"></span>
+  </div>
+  <div class="section-note">Share lots — from assignment or added manually. Sell a covered call against shares you hold here.</div>
+  <div class="lots-panel" id="lots-panel"></div>
+  <div class="add-toggle"><button class="btn" id="lot-add-toggle">+ add share lot</button></div>
+  <div class="add-panel" id="lot-add-panel">
+    <div class="add-grid lots">
+      <div class="field"><label>Ticker</label><input id="lot-ticker" placeholder="AAPL" maxlength="8"></div>
+      <div class="field"><label>Shares</label><input id="lot-shares" type="number" step="1" placeholder="100"></div>
+      <div class="field"><label>Cost basis / share</label><input id="lot-basis" type="number" step="0.01" placeholder="94.30"></div>
+      <div class="field"><button class="btn primary" id="lot-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="lot-add-error">Fill in ticker, shares and cost basis.</div>
+  </div>
+
+  <div class="table-frame">
+    <table id="cc-table">
+      <thead><tr>
+        <th>Contract</th><th>Underlying</th><th>Strike</th><th>Expiry</th><th>Qty</th>
+        <th>Entry</th><th>Mark</th><th>P&L</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="cc-body"></tbody>
+    </table>
+  </div>
+  <div class="add-toggle"><button class="btn" id="cc-add-toggle">+ sell covered call</button></div>
+  <div class="add-panel" id="cc-add-panel">
+    <div class="add-grid">
+      <div class="field"><label>Ticker</label><input id="cc-ticker" placeholder="AAPL" maxlength="8"></div>
+      <div class="field"><label>Strike</label><input id="cc-strike" type="number" step="0.5" placeholder="105"></div>
+      <div class="field"><label>Expiry</label><input id="cc-expiry" type="date"></div>
+      <div class="field"><label>Qty (contracts)</label><input id="cc-qty" type="number" step="1" placeholder="1"></div>
+      <div class="field"><label>Premium received</label><input id="cc-entry" type="number" step="0.01" placeholder="0.85"></div>
+      <div class="field"></div>
+      <div class="field"><button class="btn primary" id="cc-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="cc-add-error">Fill in ticker, strike, expiry, qty and premium.</div>
+  </div>
+
+  <!-- ============ RECENT ACTIVITY ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Recent activity</h2>
+    <span class="count" id="recent-count-label"></span>
+  </div>
+  <div class="table-frame">
+    <table id="recent-table">
+      <thead><tr>
+        <th>Contract</th><th>Strategy</th><th>Strike</th><th>Closed</th><th>Qty</th>
+        <th>Entry</th><th>Exit</th><th>P&L</th><th>Status</th>
+      </tr></thead>
+      <tbody id="recent-body"></tbody>
+    </table>
+  </div>
 
   <div class="foot-note">
-    <span>quotes updated <span id="timestamp">—</span></span>
-    <span>api calls today (this page) <span id="api-usage">0 / 25</span></span>
-    <span><button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes (uses one request per ticker)">↻ refresh quotes</button></span>
+    <span class="note">quotes updated <span id="timestamp">—</span> · api calls this session <span id="api-usage">0 / 25</span></span>
+    <button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes">↻ refresh quotes</button>
   </div>
+  <div class="foot-note" style="border-top:none;padding-top:0;">
+    <span class="note">Everything lives in memory for this session only — Claude artifacts can't use browser storage, so all positions, balances and quotes reset on reload. Host the file yourself if you want it to persist.</span>
+  </div>
+
 </div>
 
 <script>
   // ================= CONFIG =================
-  // ⚠️ Testing key — rotate at alphavantage.co when finished.
   const API_KEY  = 'UHK46ZZ7UEKFQTLK';
   const API_BASE = 'https://www.alphavantage.co/query';
+  const CACHE_TTL_MS = 30 * 60 * 1000;
+  const DAILY_LIMIT  = 25;
+  const CALL_GAP_MS  = 1200;
 
-  const CACHE_TTL_MS  = 30 * 60 * 1000; // 30 min — reloading the page won't burn quota
-  const CACHE_PREFIX  = 'av_quote_';
-  const USAGE_KEY     = 'av_usage';
-  const DAILY_LIMIT   = 25;             // Alpha Vantage free tier, soft guide
-  const CALL_GAP_MS   = 1200;           // spacing between network calls (~5/min)
+  // ================= STATE (in-memory only) =================
+  let startingBalance = 25000;
 
-  // ================= DATA =================
-  // Your four positions added below.
-  // Fields: ticker, type, strike, expiry (YYYY-MM-DD), qty, entry (premium),
-  //         mark (current premium — manual), status
-  const openPositions = [
-    { ticker:'GLXY', type:'Call', strike:20,   expiry:'2026-10-16', qty:4, entry:0.50,  mark:0.50,  status:'open' },
-    { ticker:'RKLB', type:'Call', strike:55,   expiry:'2026-10-16', qty:1, entry:1.80,  mark:1.80,  status:'open' },
-    { ticker:'SOFI', type:'Call', strike:16,   expiry:'2026-10-16', qty:5, entry:0.34,  mark:0.34,  status:'open' },
-    { ticker:'GLXY', type:'Call', strike:22,   expiry:'2026-09-18', qty:3, entry:0.40,  mark:0.40,  status:'open' }
+  let longs = [
+    { id:1, ticker:'GLXY', type:'Call', strike:20, expiry:'2026-10-16', qty:4, entry:0.50, mark:0.50 },
+    { id:2, ticker:'RKLB', type:'Call', strike:55, expiry:'2026-10-16', qty:1, entry:1.80, mark:1.80 },
+    { id:3, ticker:'SOFI', type:'Call', strike:16, expiry:'2026-10-16', qty:5, entry:0.34, mark:0.34 },
+    { id:4, ticker:'GLXY', type:'Call', strike:22, expiry:'2026-09-18', qty:3, entry:0.40, mark:0.40 }
   ];
+  let csps = [];
+  let ccs = [];
+  let shareLots = [];   // { id, ticker, shares, basis, source }
+  let recentTrades = []; // { ticker,type,strike,expiry,qty,entry,exit,closedOn,status,kind }
+  let nextId = 100;
 
-  const recentTrades = [
-    // Add your closed trades here later, e.g.:
-    // { ticker:'NVDA', type:'Call', strike:920, expiry:'2025-05-30', qty:2, entry:18.20, exit:32.40, status:'closed' }
-  ];
+  const quoteCache = new Map();
+  let apiCalls = 0;
+  let rateLimited = false;
+  let isUpdating = false;
 
   // ================= HELPERS =================
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // side: 'long' profits when mark rises above entry. 'short' profits when mark falls below entry.
+  const calcPnl = (entry, markOrExit, qty, side) =>
+    side === 'short' ? (entry - markOrExit) * qty * 100 : (markOrExit - entry) * qty * 100;
 
-  function calcPnl(entry, mark, qty){ return (mark - entry) * qty * 100; }
-
-  function formatPnl(val){
+  function formatMoney(val){
     const abs = Math.abs(val).toFixed(2);
-    return `${val >= 0 ? '+' : '-'}$${abs}`;
+    return val >= 0 ? `+$${abs}` : `($${abs})`;
   }
-
+  function formatPlain(val){
+    return '$' + val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
   function pnlClass(val){
-    if (val >  0.01) return 'pnl-pos';
-    if (val < -0.01) return 'pnl-neg';
-    return 'pnl-neutral';
+    if (val > 0.01) return 'pos';
+    if (val < -0.01) return 'neg';
+    return 'flat';
   }
-
   function formatDate(dateStr){
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   }
-
-  function badgeClass(status){
-    if (status === 'open')    return 'badge open';
-    if (status === 'closed')  return 'badge closed';
-    if (status === 'expired') return 'badge expired';
-    return 'badge';
-  }
-
   function daysToExpiry(dateStr){
     const d = new Date(dateStr + 'T00:00:00');
-    const diff = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff + 'd' : 'expired';
+    return Math.ceil((d - new Date()) / (1000*60*60*24));
+  }
+  function statusRow(status){
+    const label = status.replace('_',' ');
+    return `<span class="status-row st-${status}"><span class="status-dot">●</span>${label}</span>`;
+  }
+  function allTickers(){
+    return [...new Set([...longs, ...csps, ...ccs].map(p => p.ticker))];
   }
 
-  // ================= RENDER OPEN TABLE =================
-  document.getElementById('open-body').innerHTML = openPositions.map((p, idx) => {
-    const pnl = calcPnl(p.entry, p.mark, p.qty);
-    return `<tr>
-      <td><span class="ticker">${p.ticker}</span><span class="sub-detail">${p.type} ${p.strike} · ${daysToExpiry(p.expiry)}</span></td>
-      <td>
-        <span class="underlying-price loading" data-ticker="${p.ticker}" id="underlying-${idx}">—</span>
-        <span class="underlying-chg" data-ticker="${p.ticker}"></span>
-      </td>
-      <td>${p.type}</td>
-      <td>$${p.strike.toFixed(2)}</td>
-      <td>${formatDate(p.expiry)}</td>
-      <td>${p.qty}</td>
-      <td>$${p.entry.toFixed(2)}</td>
-      <td>$${p.mark.toFixed(2)}</td>
-      <td class="${pnlClass(pnl)}">${formatPnl(pnl)}</td>
-      <td><span class="${badgeClass(p.status)}">${p.status}</span></td>
-    </tr>`;
-  }).join('');
-
-  // ================= RENDER RECENT TABLE =================
-  const recentBody = document.getElementById('recent-body');
-  if (recentTrades.length === 0){
-    recentBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--sub-dim);padding:20px;">No closed trades yet.</td></tr>`;
-  } else {
-    recentBody.innerHTML = recentTrades.map(t => {
-      const pnl = calcPnl(t.entry, t.exit, t.qty);
-      return `<tr>
-        <td><span class="ticker">${t.ticker}</span><span class="sub-detail">${t.type} ${t.strike}</span></td>
-        <td>${t.type}</td>
-        <td>$${t.strike.toFixed(2)}</td>
-        <td>${formatDate(t.expiry)}</td>
-        <td>${t.qty}</td>
-        <td>$${t.entry.toFixed(2)}</td>
-        <td>$${t.exit.toFixed(2)}</td>
-        <td class="${pnlClass(pnl)}">${formatPnl(pnl)}</td>
-        <td><span class="${badgeClass(t.status)}">${t.status}</span></td>
+  // ================= GENERIC OPEN-TABLE RENDER =================
+  function renderOpenTable(list, bodyId, side, cols){
+    // cols: function(p) -> extra <td> html between Underlying and Entry (e.g. collateral)
+    const body = document.getElementById(bodyId);
+    if (list.length === 0){
+      body.innerHTML = `<tr class="empty-row"><td colspan="11">Nothing open here yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = list.map(p => {
+      const pnl = calcPnl(p.entry, p.mark, p.qty, side);
+      const dte = daysToExpiry(p.expiry);
+      const dteLabel = dte < 0 ? 'expired' : dte + 'd';
+      const dteClass = (dte >= 0 && dte <= 3) ? 'contract-sub urgent' : 'contract-sub';
+      const typeLabel = p.type ? p.type : (side === 'short' ? (bodyId.startsWith('csp') ? 'Put' : 'Call') : '');
+      const extra = cols ? cols(p) : '';
+      return `<tr data-id="${p.id}">
+        <td data-label="Contract"><span class="ticker">${p.ticker}</span><span class="${dteClass}">${typeLabel} ${p.strike} · ${dteLabel}</span></td>
+        <td data-label="Underlying">
+          <span class="underlying-price loading" data-ticker="${p.ticker}">—</span>
+          <span class="underlying-chg" data-ticker="${p.ticker}"></span>
+        </td>
+        <td data-label="Strike">$${p.strike.toFixed(2)}</td>
+        <td data-label="Expiry">${formatDate(p.expiry)}</td>
+        <td data-label="Qty">${p.qty}</td>
+        ${extra}
+        <td data-label="Entry">$${p.entry.toFixed(2)}</td>
+        <td data-label="Mark"><span class="mark-cell" data-list="${bodyId}" data-id="${p.id}" title="Click to edit">$${p.mark.toFixed(2)}</span></td>
+        <td data-label="P&L"><span class="pnl ${pnlClass(pnl)}">${formatMoney(pnl)}</span></td>
+        <td data-label="Status">${statusRow(dte < 0 ? 'expired' : 'open')}</td>
+        <td class="actions" data-label="">
+          <div class="row-actions" data-list="${bodyId}" data-id="${p.id}">
+            <button class="btn close-btn" data-list="${bodyId}" data-id="${p.id}">close</button>
+            ${bodyId === 'csp-body' ? `<button class="btn assign-btn" data-id="${p.id}">assign</button>` : ''}
+            ${bodyId === 'cc-body' ? `<button class="btn assign-btn cc-call" data-id="${p.id}">called away</button>` : ''}
+            <button class="btn danger ghost del-btn" data-list="${bodyId}" data-id="${p.id}">delete</button>
+          </div>
+        </td>
       </tr>`;
     }).join('');
   }
 
-  // ================= KPIs =================
-  const openPnlSum = openPositions.reduce((a, p) => a + calcPnl(p.entry, p.mark, p.qty), 0);
-  const realizedSum = recentTrades
-    .filter(t => t.status === 'closed')
-    .reduce((a, t) => a + calcPnl(t.entry, t.exit, t.qty), 0);
-  const netPnl = realizedSum + openPnlSum;
-
-  const setKpi = (id, val) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = formatPnl(val);
-    el.className = 'value ' + (val >= 0 ? 'green' : 'red');
-  };
-  setKpi('unrealized-pnl', openPnlSum);
-  setKpi('realized-pnl',   realizedSum);
-  setKpi('net-pnl',        netPnl);
-
-  // Deltas
-  document.getElementById('unrealized-pnl-delta').textContent = openPositions.length + ' open positions';
-  document.getElementById('realized-pnl-delta').textContent = recentTrades.filter(t => t.status === 'closed').length + ' closed trades';
-  document.getElementById('net-pnl-delta').textContent = 'realized + unrealized';
-
-  const openRisk = openPositions.reduce((a, p) => a + p.entry * p.qty * 100, 0);
-  document.getElementById('open-risk').textContent =
-    '$' + openRisk.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  document.getElementById('open-risk-delta').textContent = openPositions.length + ' open positions';
-  document.getElementById('pos-count').textContent = openPositions.length;
-
-  const closed = recentTrades.filter(t => t.status === 'closed');
-  const wins   = closed.filter(t => t.exit > t.entry).length;
-  document.getElementById('win-rate').textContent =
-    (closed.length ? Math.round(wins / closed.length * 100) : 0) + '%';
-
-  // ================= QUOTE CACHE =================
-  function readCache(symbol){
-    try{
-      const raw = localStorage.getItem(CACHE_PREFIX + symbol);
-      if (!raw) return null;
-      const obj = JSON.parse(raw);
-      if (!obj || typeof obj.t !== 'number') return null;
-      if (Date.now() - obj.t > CACHE_TTL_MS) return null;
-      return obj;
-    } catch(e){ return null; }
+  function renderLong(){
+    renderOpenTable(longs, 'long-body', 'long');
+    document.getElementById('long-count-label').textContent = longs.length + ' position' + (longs.length===1?'':'s');
+  }
+  function renderCsp(){
+    renderOpenTable(csps, 'csp-body', 'short', p => `<td data-label="Collateral">$${(p.strike*p.qty*100).toFixed(0)}</td>`);
+    document.getElementById('csp-count-label').textContent = csps.length + ' position' + (csps.length===1?'':'s');
+  }
+  function renderCc(){
+    renderOpenTable(ccs, 'cc-body', 'short');
+    document.getElementById('cc-count-label').textContent = ccs.length + ' position' + (ccs.length===1?'':'s');
   }
 
-  function writeCache(symbol, payload){
-    try{
-      localStorage.setItem(CACHE_PREFIX + symbol, JSON.stringify({ t: Date.now(), ...payload }));
-    } catch(e){ /* storage full / disabled — degrade silently */ }
-  }
-
-  function clearCache(){
-    const tickers = [...new Set(openPositions.map(p => p.ticker))];
-    tickers.forEach(t => {
-      try{ localStorage.removeItem(CACHE_PREFIX + t); }catch(e){}
+  function renderLots(){
+    const panel = document.getElementById('lots-panel');
+    if (shareLots.length === 0){
+      panel.innerHTML = `<div class="lot-row"><span class="ls">No share lots yet — assign a put or add one manually.</span></div>`;
+      return;
+    }
+    panel.innerHTML = shareLots.map(l => `
+      <div class="lot-row">
+        <span class="lt">${l.ticker}</span>
+        <span class="ls">${l.shares} sh · cost basis $${l.basis.toFixed(2)}</span>
+        <span class="src">${l.source}</span>
+        <button class="btn danger ghost lot-del-btn" data-id="${l.id}" style="margin:0;">remove</button>
+      </div>`).join('');
+    panel.querySelectorAll('.lot-del-btn').forEach(el => {
+      el.addEventListener('click', () => {
+        shareLots = shareLots.filter(l => l.id !== parseInt(el.dataset.id));
+        renderAll();
+      });
     });
   }
 
-  // ================= USAGE COUNTER =================
-  function todayKey(){ return new Date().toISOString().slice(0, 10); }
-
-  let apiCalls = (() => {
-    try{
-      const raw = localStorage.getItem(USAGE_KEY);
-      if (!raw) return 0;
-      const obj = JSON.parse(raw);
-      return obj.date === todayKey() ? (obj.count || 0) : 0;
-    } catch(e){ return 0; }
-  })();
-
-  function renderUsage(){
-    const el = document.getElementById('api-usage');
-    if (!el) return;
-    el.textContent = `${apiCalls} / ${DAILY_LIMIT}`;
-    el.style.color = apiCalls >= DAILY_LIMIT ? 'var(--red)' : '';
+  function kindLabel(kind){
+    return { long:'Long', csp:'Cash-secured put', cc:'Covered call' }[kind] || kind;
   }
 
+  function renderRecent(){
+    const body = document.getElementById('recent-body');
+    if (recentTrades.length === 0){
+      body.innerHTML = `<tr class="empty-row"><td colspan="9">No closed trades yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = recentTrades.slice().reverse().map(t => {
+      const side = t.kind === 'long' ? 'long' : 'short';
+      const pnl = calcPnl(t.entry, t.exit, t.qty, side);
+      return `<tr>
+        <td data-label="Contract"><span class="ticker">${t.ticker}</span><span class="contract-sub">${t.type} ${t.strike}</span></td>
+        <td data-label="Strategy">${kindLabel(t.kind)}</td>
+        <td data-label="Strike">$${t.strike.toFixed(2)}</td>
+        <td data-label="Closed">${formatDate(t.closedOn)}</td>
+        <td data-label="Qty">${t.qty}</td>
+        <td data-label="Entry">$${t.entry.toFixed(2)}</td>
+        <td data-label="Exit">$${t.exit.toFixed(2)}</td>
+        <td data-label="P&L"><span class="pnl ${pnlClass(pnl)}">${formatMoney(pnl)}</span></td>
+        <td data-label="Status">${statusRow(t.status)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderLedgers(){
+    const openRiskLong = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
+    const openRiskCsp  = csps.reduce((a,p) => a + p.strike*p.qty*100, 0);
+    const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
+    const capitalDeployed = openRiskLong + openRiskCsp + openRiskLots;
+
+    const unrealized =
+      longs.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'long'), 0) +
+      csps.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0) +
+      ccs.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0);
+
+    const realized = recentTrades.reduce((a,t) => {
+      const side = t.kind === 'long' ? 'long' : 'short';
+      return a + calcPnl(t.entry, t.exit, t.qty, side);
+    }, 0);
+
+    // share lot unrealized, using cached quotes where available
+    const sharePnl = shareLots.reduce((a,l) => {
+      const q = quoteCache.get(l.ticker);
+      return a + (q && q.price != null ? (q.price - l.basis) * l.shares : 0);
+    }, 0);
+
+    const netPnl = realized + unrealized;
+    const ytd = netPnl + sharePnl;
+    const accountValue = startingBalance + ytd;
+
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      el.textContent = formatMoney(val);
+      el.className = 'value ' + (val < -0.01 ? 'dim' : '');
+    };
+    setVal('net-pnl', netPnl);
+    setVal('realized-pnl', realized);
+    setVal('unrealized-pnl', unrealized);
+    setVal('ytd-pnl', ytd);
+
+    document.getElementById('starting-balance').textContent = formatPlain(startingBalance);
+    document.getElementById('account-value').textContent = formatPlain(Math.max(accountValue,0));
+    document.getElementById('open-risk').textContent = formatPlain(capitalDeployed);
+    document.getElementById('open-risk-sub').textContent = (longs.length+csps.length) + ' open, ' + shareLots.length + ' lot' + (shareLots.length===1?'':'s');
+    document.getElementById('realized-sub').textContent = recentTrades.length + ' closed';
+    document.getElementById('unrealized-sub').textContent = (longs.length+csps.length+ccs.length) + ' open';
+    document.getElementById('ytd-pct').textContent = startingBalance > 0 ? (ytd/startingBalance*100 >= 0 ? '+' : '') + (ytd/startingBalance*100).toFixed(1) + '% of starting balance' : '—';
+
+    document.getElementById('pos-count').textContent = longs.length + csps.length + ccs.length;
+  }
+
+  function renderAll(){
+    renderLong();
+    renderCsp();
+    renderCc();
+    renderLots();
+    renderRecent();
+    renderLedgers();
+    attachRowHandlers();
+    updateUnderlyingPrices();
+  }
+
+  // ================= LIST LOOKUP =================
+  function listFor(name){
+    return { 'long-body':longs, 'csp-body':csps, 'cc-body':ccs }[name];
+  }
+  function setListFor(name, arr){
+    if (name === 'long-body') longs = arr;
+    if (name === 'csp-body') csps = arr;
+    if (name === 'cc-body') ccs = arr;
+  }
+  function kindFor(name){
+    return { 'long-body':'long', 'csp-body':'csp', 'cc-body':'cc' }[name];
+  }
+
+  // ================= ROW ACTIONS =================
+  function attachRowHandlers(){
+    document.querySelectorAll('.mark-cell').forEach(el => {
+      el.addEventListener('click', () => beginMarkEdit(el));
+    });
+    document.querySelectorAll('.close-btn').forEach(el => {
+      el.addEventListener('click', () => beginClose(el));
+    });
+    document.querySelectorAll('.del-btn').forEach(el => {
+      el.addEventListener('click', () => {
+        const list = listFor(el.dataset.list).filter(p => p.id !== parseInt(el.dataset.id));
+        setListFor(el.dataset.list, list);
+        renderAll();
+      });
+    });
+    document.querySelectorAll('.assign-btn').forEach(el => {
+      el.addEventListener('click', () => {
+        if (el.classList.contains('cc-call')) beginCalledAway(el);
+        else beginAssign(el);
+      });
+    });
+    const sb = document.getElementById('starting-balance');
+    sb.onclick = () => {
+      const input = document.createElement('input');
+      input.className = 'ledger-input';
+      input.type = 'number';
+      input.step = '100';
+      input.value = startingBalance;
+      sb.replaceWith(input);
+      input.focus();
+      input.select();
+      const commit = () => {
+        const val = parseFloat(input.value);
+        if (!isNaN(val) && val >= 0) startingBalance = val;
+        renderAll();
+      };
+      input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
+      input.addEventListener('blur', commit);
+    };
+  }
+
+  function beginMarkEdit(el){
+    const list = listFor(el.dataset.list);
+    const id = parseInt(el.dataset.id);
+    const pos = list.find(p => p.id === id);
+    if (!pos) return;
+    const input = document.createElement('input');
+    input.className = 'mark-input';
+    input.type = 'number';
+    input.step = '0.01';
+    input.value = pos.mark.toFixed(2);
+    el.replaceWith(input);
+    input.focus();
+    input.select();
+    const commit = () => {
+      const val = parseFloat(input.value);
+      if (!isNaN(val) && val >= 0) pos.mark = val;
+      renderAll();
+    };
+    input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
+    input.addEventListener('blur', commit);
+  }
+
+  function beginClose(el){
+    const id = parseInt(el.dataset.id);
+    const listName = el.dataset.list;
+    const wrap = document.querySelector(`.row-actions[data-list="${listName}"][data-id="${id}"]`);
+    const pos = listFor(listName).find(p => p.id === id);
+    if (!wrap || !pos) return;
+    wrap.innerHTML = `
+      <div class="inline-form">
+        <input type="number" step="0.01" id="exit-input-${id}" placeholder="exit $">
+        <button class="btn primary" id="exit-confirm-${id}">confirm</button>
+        <button class="btn ghost" id="exit-cancel-${id}">cancel</button>
+      </div>`;
+    document.getElementById(`exit-cancel-${id}`).addEventListener('click', renderAll);
+    document.getElementById(`exit-confirm-${id}`).addEventListener('click', () => {
+      const val = parseFloat(document.getElementById(`exit-input-${id}`).value);
+      if (isNaN(val) || val < 0) return;
+      closePosition(listName, id, val, daysToExpiry(pos.expiry) < 0 ? 'expired' : 'closed');
+    });
+  }
+
+  function closePosition(listName, id, exitPrice, status){
+    const list = listFor(listName);
+    const idx = list.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const pos = list[idx];
+    recentTrades.push({
+      ticker: pos.ticker, type: pos.type || (listName==='csp-body' ? 'Put' : 'Call'),
+      strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
+      entry: pos.entry, exit: exitPrice,
+      closedOn: new Date().toISOString().slice(0,10),
+      status, kind: kindFor(listName)
+    });
+    list.splice(idx, 1);
+    setListFor(listName, list);
+    renderAll();
+  }
+
+  function beginAssign(el){
+    const id = parseInt(el.dataset.id);
+    const pos = csps.find(p => p.id === id);
+    if (!pos) return;
+    if (!confirm(`Mark ${pos.ticker} $${pos.strike} put as assigned? This buys ${pos.qty*100} shares at $${pos.strike} and adds a share lot.`)) return;
+    // option leg settles at 0 — full premium kept
+    closePosition('csp-body', id, 0, 'assigned');
+    const basis = pos.strike - pos.entry; // premium lowers effective cost basis
+    shareLots.push({ id: nextId++, ticker: pos.ticker, shares: pos.qty*100, basis, source: 'assigned' });
+    renderAll();
+  }
+
+  function beginCalledAway(el){
+    const id = parseInt(el.dataset.id);
+    const pos = ccs.find(p => p.id === id);
+    if (!pos) return;
+    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away? This sells ${pos.qty*100} shares at $${pos.strike} from your share lots.`)) return;
+    closePosition('cc-body', id, 0, 'called_away');
+    let remaining = pos.qty * 100;
+    shareLots = shareLots.map(l => {
+      if (l.ticker !== pos.ticker || remaining <= 0) return l;
+      const take = Math.min(l.shares, remaining);
+      remaining -= take;
+      return { ...l, shares: l.shares - take };
+    }).filter(l => l.shares > 0);
+    renderAll();
+  }
+
+  // ================= ADD FORMS =================
+  function wireAddForm(toggleId, panelId, confirmId, errorId, fieldIds, build, targetList, setTarget){
+    const panel = document.getElementById(panelId);
+    document.getElementById(toggleId).addEventListener('click', () => panel.classList.toggle('open'));
+    document.getElementById(confirmId).addEventListener('click', () => {
+      const vals = {};
+      let ok = true;
+      fieldIds.forEach(([key, id, kind]) => {
+        const raw = document.getElementById(id).value;
+        if (kind === 'text') { vals[key] = raw.trim().toUpperCase(); if (!vals[key]) ok = false; }
+        else if (kind === 'select') { vals[key] = raw; }
+        else if (kind === 'date') { vals[key] = raw; if (!raw) ok = false; }
+        else { vals[key] = parseFloat(raw); if (isNaN(vals[key]) || (kind==='qty' && vals[key] <= 0) || (kind==='num' && vals[key] < 0)) ok = false; }
+      });
+      const errEl = document.getElementById(errorId);
+      if (!ok){ errEl.style.display = 'block'; return; }
+      errEl.style.display = 'none';
+      const arr = build(vals);
+      fieldIds.forEach(([,id]) => { const f = document.getElementById(id); if (f.tagName==='INPUT') f.value=''; });
+      panel.classList.remove('open');
+      renderAll();
+    });
+  }
+
+  wireAddForm('long-add-toggle','long-add-panel','long-add-confirm','long-add-error',
+    [['ticker','long-ticker','text'],['type','long-type','select'],['strike','long-strike','num'],
+     ['expiry','long-expiry','date'],['qty','long-qty','qty'],['entry','long-entry','num']],
+    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry }); });
+
+  wireAddForm('csp-add-toggle','csp-add-panel','csp-add-confirm','csp-add-error',
+    [['ticker','csp-ticker','text'],['strike','csp-strike','num'],
+     ['expiry','csp-expiry','date'],['qty','csp-qty','qty'],['entry','csp-entry','num']],
+    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry }); });
+
+  wireAddForm('cc-add-toggle','cc-add-panel','cc-add-confirm','cc-add-error',
+    [['ticker','cc-ticker','text'],['strike','cc-strike','num'],
+     ['expiry','cc-expiry','date'],['qty','cc-qty','qty'],['entry','cc-entry','num']],
+    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry }); });
+
+  wireAddForm('lot-add-toggle','lot-add-panel','lot-add-confirm','lot-add-error',
+    [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
+    v => { shareLots.push({ id: nextId++, ticker:v.ticker, shares:v.shares, basis:v.basis, source:'manual' }); });
+
+  // ================= QUOTES =================
   function bumpUsage(){
     apiCalls++;
-    try{
-      localStorage.setItem(USAGE_KEY, JSON.stringify({ date: todayKey(), count: apiCalls }));
-    } catch(e){}
-    renderUsage();
+    const el = document.getElementById('api-usage');
+    el.textContent = `${apiCalls} / ${DAILY_LIMIT}`;
+    el.style.color = apiCalls >= DAILY_LIMIT ? 'var(--silver)' : '';
   }
-
-  // ================= NETWORK =================
-  let rateLimited = false;
 
   async function fetchQuoteNetwork(symbol){
-    if (rateLimited) return { error: 'rate-limit' };
-
+    if (rateLimited) return { error:'rate-limit' };
     const url = `${API_BASE}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${API_KEY}`;
     bumpUsage();
-
     try{
       const resp = await fetch(url);
-      if (!resp.ok) return { error: 'http-' + resp.status };
-
+      if (!resp.ok) return { error:'http-'+resp.status };
       const data = await resp.json();
-
-      // Alpha Vantage signals throttling via Note / Information
-      if (data['Note'] || data['Information']){
-        rateLimited = true;
-        return { error: 'rate-limit' };
-      }
-      if (data['Error Message']) return { error: 'invalid-symbol' };
-
+      if (data['Note'] || data['Information']){ rateLimited = true; return { error:'rate-limit' }; }
+      if (data['Error Message']) return { error:'invalid-symbol' };
       const q = data['Global Quote'];
-      if (!q || !q['05. price']) return { error: 'no-data' };
-
+      if (!q || !q['05. price']) return { error:'no-data' };
       return {
-        price:     parseFloat(q['05. price']),
-        change:    parseFloat(q['09. change']),
-        changePct: parseFloat(String(q['10. change percent'] || '0').replace('%', ''))
+        price: parseFloat(q['05. price']),
+        change: parseFloat(q['09. change']),
+        changePct: parseFloat(String(q['10. change percent'] || '0').replace('%',''))
       };
-    } catch(err){
-      return { error: 'network' };
-    }
+    } catch(err){ return { error:'network' }; }
   }
 
-  // ================= DOM APPLICATION =================
   function errorText(code){
     return ({
-      'rate-limit':    'Alpha Vantage daily/min rate limit reached',
-      'invalid-symbol':'Symbol not recognised by Alpha Vantage',
-      'no-data':       'No quote data returned',
-      'network':       'Network error — check connection'
+      'rate-limit':'Alpha Vantage rate limit reached',
+      'invalid-symbol':'Symbol not recognised',
+      'no-data':'No quote data returned',
+      'network':'Network error'
     })[code] || 'Quote unavailable';
   }
 
@@ -395,20 +765,19 @@
       el.classList.remove('loading');
       if (result && result.price != null){
         el.textContent = '$' + result.price.toFixed(2);
-        el.classList.remove('error');
+        el.classList.remove('err');
         el.removeAttribute('title');
       } else {
         el.textContent = 'n/a';
-        el.classList.add('error');
+        el.classList.add('err');
         el.title = errorText(result && result.error);
       }
     });
-
     document.querySelectorAll(`.underlying-chg[data-ticker="${ticker}"]`).forEach(el => {
       if (result && result.changePct != null && !isNaN(result.changePct)){
         const up = result.changePct >= 0;
-        el.textContent = (up ? '+' : '') + result.changePct.toFixed(2) + '%';
-        el.className = 'underlying-chg ' + (up ? 'chg-up' : 'chg-down');
+        el.innerHTML = `<span class="tri">${up ? '▲' : '▼'}</span> ${Math.abs(result.changePct).toFixed(2)}%`;
+        el.className = 'underlying-chg ' + (up ? 'up' : 'down');
       } else {
         el.textContent = '';
         el.className = 'underlying-chg';
@@ -416,55 +785,43 @@
     });
   }
 
-  // ================= MAIN UPDATE =================
-  let isUpdating = false;
-
   async function updateUnderlyingPrices({ force = false } = {}){
     if (isUpdating) return;
     isUpdating = true;
-
     const btn = document.getElementById('refresh-quotes');
     btn.disabled = true;
+    if (force) quoteCache.clear();
 
-    if (force) clearCache();
-
-    const tickers = [...new Set(openPositions.map(p => p.ticker))];
+    const tickers = [...new Set([...allTickers(), ...shareLots.map(l => l.ticker)])];
     let usedNetwork = false;
     let fromCacheCount = 0;
 
     for (const ticker of tickers){
-      const cached = force ? null : readCache(ticker);
+      const cached = !force && quoteCache.get(ticker);
+      const fresh = cached && (Date.now() - cached.t < CACHE_TTL_MS);
       let result;
-
-      if (cached){
-        result = cached;
-        fromCacheCount++;
-      } else {
-        if (usedNetwork) await sleep(CALL_GAP_MS); // stay under ~5 calls/min
+      if (fresh){ result = cached; fromCacheCount++; }
+      else {
+        if (usedNetwork) await sleep(CALL_GAP_MS);
         result = await fetchQuoteNetwork(ticker);
         usedNetwork = true;
-        if (result && result.price != null) writeCache(ticker, result);
+        if (result && result.price != null) quoteCache.set(ticker, { t: Date.now(), ...result });
       }
-
       applyQuote(ticker, result);
     }
 
-    const now = new Date();
-    const stamp = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-    document.getElementById('timestamp').textContent =
-      fromCacheCount === tickers.length ? `${stamp} (cached)` : stamp;
-
+    const stamp = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('timestamp').textContent = fromCacheCount === tickers.length && tickers.length ? `${stamp} (cached)` : stamp;
     btn.disabled = false;
     isUpdating = false;
+    renderLedgers(); // share-lot P&L depends on quotes
   }
 
-  // ================= INIT =================
-  renderUsage();
-  updateUnderlyingPrices();
+  document.getElementById('refresh-quotes').addEventListener('click', () => updateUnderlyingPrices({ force:true }));
 
-  document.getElementById('refresh-quotes').addEventListener('click', () => {
-    updateUnderlyingPrices({ force: true });
-  });
+  // ================= INIT =================
+  document.getElementById('api-usage').textContent = `0 / ${DAILY_LIMIT}`;
+  renderAll();
 </script>
 </body>
 </html>
