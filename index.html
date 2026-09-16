@@ -388,8 +388,9 @@
     side === 'short' ? (entry - markOrExit) * qty * 100 : (markOrExit - entry) * qty * 100;
 
   function formatMoney(val){
+    if (Math.abs(val) < 0.005) return '$0.00';
     const abs = Math.abs(val).toFixed(2);
-    return val >= 0 ? `+$${abs}` : `($${abs})`;
+    return val > 0 ? `+$${abs}` : `($${abs})`;
   }
   function formatPlain(val){
     return '$' + val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -413,6 +414,10 @@
   }
   function allTickers(){
     return [...new Set([...longs, ...csps, ...ccs].map(p => p.ticker))];
+  }
+  function getQuotePrice(ticker){
+    const q = quoteCache.get(ticker);
+    return q && q.price != null ? q.price : null;
   }
 
   // ================= GENERIC OPEN-TABLE RENDER =================
@@ -497,13 +502,17 @@
       panel.innerHTML = `<div class="lot-row"><span class="ls">No share lots yet — assign a put or add one manually.</span></div>`;
       return;
     }
-    panel.innerHTML = shareLots.map(l => `
+    panel.innerHTML = shareLots.map(l => {
+      const q = getQuotePrice(l.ticker);
+      const mktLabel = q != null ? ` · mkt $${q.toFixed(2)}` : '';
+      return `
       <div class="lot-row">
         <span class="lt">${l.ticker}</span>
-        <span class="ls">${l.shares} sh · cost basis $${l.basis.toFixed(2)}</span>
+        <span class="ls">${l.shares} sh · cost basis $${l.basis.toFixed(2)}${mktLabel}</span>
         <span class="src">${l.source}</span>
         <button class="btn danger ghost lot-del-btn" data-id="${l.id}" style="margin:0;">remove</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     panel.querySelectorAll('.lot-del-btn').forEach(el => {
       el.addEventListener('click', () => {
         shareLots = shareLots.filter(l => l.id !== parseInt(el.dataset.id));
@@ -513,7 +522,13 @@
   }
 
   function kindLabel(kind){
-    return { long:'Long', csp:'Cash-secured put', cc:'Covered call' }[kind] || kind;
+    return {
+      long:'Long',
+      csp:'Cash-secured put',
+      cc:'Covered call',
+      assign_shares:'Assigned shares',
+      called_shares:'Called-away shares'
+    }[kind] || kind;
   }
 
   function renderRecent(){
@@ -524,11 +539,16 @@
     }
     body.innerHTML = recentTrades.slice().reverse().map(t => {
       const side = t.kind === 'long' ? 'long' : 'short';
-      const pnl = calcPnl(t.entry, t.exit, t.qty, side);
+      // For share-leg entries, we stored an explicit pnl to avoid ambiguity
+      const pnl = (typeof t.pnl === 'number')
+        ? t.pnl
+        : calcPnl(t.entry, t.exit, t.qty, side);
+      const typeLabel = t.type || '';
+      const strikeLabel = (typeof t.strike === 'number' && t.strike > 0) ? `$${t.strike.toFixed(2)}` : '—';
       return `<tr>
-        <td data-label="Contract"><span class="ticker">${t.ticker}</span><span class="contract-sub">${t.type} ${t.strike}</span></td>
+        <td data-label="Contract"><span class="ticker">${t.ticker}</span><span class="contract-sub">${typeLabel}${typeLabel ? ' ' : ''}${t.strike ? t.strike : ''}</span></td>
         <td data-label="Strategy">${kindLabel(t.kind)}</td>
-        <td data-label="Strike">$${t.strike.toFixed(2)}</td>
+        <td data-label="Strike">${strikeLabel}</td>
         <td data-label="Closed">${formatDate(t.closedOn)}</td>
         <td data-label="Qty">${t.qty}</td>
         <td data-label="Entry">$${t.entry.toFixed(2)}</td>
@@ -551,6 +571,7 @@
       ccs.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0);
 
     const realized = recentTrades.reduce((a,t) => {
+      if (typeof t.pnl === 'number') return a + t.pnl;
       const side = t.kind === 'long' ? 'long' : 'short';
       return a + calcPnl(t.entry, t.exit, t.qty, side);
     }, 0);
@@ -725,31 +746,125 @@
     renderAll();
   }
 
+  // ---- Assignment: realize intrinsic value of the option leg at assignment.
+  // The option leg itself settles at 0 (premium kept). The share leg is booked
+  // at intrinsic value so the price difference between strike and market shows
+  // up as realized P&L on the trade.
+  //
+  // Examples:
+  //   CSP $22 assigned when stock is $25 -> share leg realizes +$3/share.
+  //   CSP $22 assigned when stock is $20 -> share leg realizes -$2/share.
   function beginAssign(el){
     const id = parseInt(el.dataset.id);
     const pos = csps.find(p => p.id === id);
     if (!pos) return;
-    if (!confirm(`Mark ${pos.ticker} $${pos.strike} put as assigned? This buys ${pos.qty*100} shares at $${pos.strike} and adds a share lot.`)) return;
-    // option leg settles at 0 — full premium kept
+
+    const mkt = getQuotePrice(pos.ticker);
+    const settlement = mkt != null ? mkt : pos.strike;
+    const shares = pos.qty * 100;
+    const shareIntrinsic = (settlement - pos.strike) * shares;
+    const sourceNote = mkt != null
+      ? `Using market price $${mkt.toFixed(2)} for settlement.`
+      : `No live quote cached — falling back to strike price (zero share-side P&L). Hit "refresh quotes" first if you want the price move booked.`;
+
+    if (!confirm(`Assign ${pos.ticker} $${pos.strike} put?\n\nBuys ${shares} shares at $${pos.strike}. ${sourceNote}\n\nShare-side P&L booked at assignment: ${formatMoney(shareIntrinsic)}`)) return;
+
+    // 1) Option leg: exit at 0 (premium kept), status 'assigned'
     closePosition('csp-body', id, 0, 'assigned');
-    const basis = pos.strike - pos.entry; // premium lowers effective cost basis
-    shareLots.push({ id: nextId++, ticker: pos.ticker, shares: pos.qty*100, basis, source: 'assigned' });
+
+    // 2) Share leg: realize intrinsic value at settlement
+    if (Math.abs(shareIntrinsic) >= 0.005){
+      recentTrades.push({
+        ticker: pos.ticker,
+        type: 'Shares',
+        strike: 0,
+        expiry: pos.expiry,
+        qty: pos.qty,
+        entry: pos.strike,
+        exit: settlement,
+        closedOn: new Date().toISOString().slice(0,10),
+        status: 'assigned',
+        kind: 'assign_shares',
+        pnl: shareIntrinsic
+      });
+    }
+
+    // 3) Create share lot at settlement basis (so the gain isn't double-counted)
+    shareLots.push({
+      id: nextId++,
+      ticker: pos.ticker,
+      shares,
+      basis: settlement,
+      source: 'assigned'
+    });
+
     renderAll();
   }
 
+  // ---- Called away: realize the difference between strike and weighted basis
+  // of the share lots being called away, plus the option leg premium.
+  //
+  // Example:
+  //   CC $30 called away on shares with basis $22 -> share leg realizes +$8/share.
   function beginCalledAway(el){
     const id = parseInt(el.dataset.id);
     const pos = ccs.find(p => p.id === id);
     if (!pos) return;
-    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away? This sells ${pos.qty*100} shares at $${pos.strike} from your share lots.`)) return;
-    closePosition('cc-body', id, 0, 'called_away');
-    let remaining = pos.qty * 100;
-    shareLots = shareLots.map(l => {
-      if (l.ticker !== pos.ticker || remaining <= 0) return l;
+
+    const sharesNeeded = pos.qty * 100;
+    const lotsForTicker = shareLots.filter(l => l.ticker === pos.ticker);
+    const totalSharesHeld = lotsForTicker.reduce((a,l) => a + l.shares, 0);
+
+    if (totalSharesHeld < sharesNeeded){
+      if (!confirm(`${pos.ticker}: you hold ${totalSharesHeld} shares but need ${sharesNeeded} to cover this call.\n\nProceed anyway? The shortfall will be ignored (no share-side P&L booked for missing shares).`)) return;
+    }
+
+    // Compute weighted average basis of the lots being consumed
+    let remaining = Math.min(sharesNeeded, totalSharesHeld);
+    let basisWeighted = 0;
+    let sharesConsumed = 0;
+    const lotsSnapshot = lotsForTicker.map(l => ({ ...l }));
+    for (const l of lotsSnapshot){
+      if (remaining <= 0) break;
       const take = Math.min(l.shares, remaining);
+      basisWeighted += take * l.basis;
+      sharesConsumed += take;
       remaining -= take;
+    }
+    const avgBasis = sharesConsumed > 0 ? basisWeighted / sharesConsumed : pos.strike;
+    const shareGain = (pos.strike - avgBasis) * sharesConsumed;
+
+    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away?\n\nSells ${sharesConsumed} shares at $${pos.strike} (avg basis $${avgBasis.toFixed(2)}).\nShare-side P&L booked at call-away: ${formatMoney(shareGain)}`)) return;
+
+    // 1) Option leg: exit at 0 (premium kept), status 'called_away'
+    closePosition('cc-body', id, 0, 'called_away');
+
+    // 2) Share leg: realize (strike - basis) * sharesConsumed
+    if (Math.abs(shareGain) >= 0.005){
+      recentTrades.push({
+        ticker: pos.ticker,
+        type: 'Shares',
+        strike: 0,
+        expiry: pos.expiry,
+        qty: sharesConsumed / 100,
+        entry: avgBasis,
+        exit: pos.strike,
+        closedOn: new Date().toISOString().slice(0,10),
+        status: 'called_away',
+        kind: 'called_shares',
+        pnl: shareGain
+      });
+    }
+
+    // 3) Reduce share lots
+    let toRemove = sharesConsumed;
+    shareLots = shareLots.map(l => {
+      if (l.ticker !== pos.ticker || toRemove <= 0) return l;
+      const take = Math.min(l.shares, toRemove);
+      toRemove -= take;
       return { ...l, shares: l.shares - take };
     }).filter(l => l.shares > 0);
+
     renderAll();
   }
 
@@ -897,6 +1012,7 @@
     btn.disabled = false;
     isUpdating = false;
     renderLedgers(); // share-lot P&L depends on quotes
+    renderLots();    // show mkt price next to each lot
   }
 
   document.getElementById('refresh-quotes').addEventListener('click', () => updateUnderlyingPrices({ force:true }));
