@@ -25,14 +25,12 @@
   .wrap{max-width:1120px;margin:0 auto;}
   ::selection{background:var(--silver);color:#fff;}
 
-  /* ---------- header ---------- */
   .header-row{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line);margin-bottom:26px;}
   h1{font-family:var(--sans);font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0;color:var(--white);}
   .sub-line{color:var(--silver-dim);font-size:13px;margin-top:5px;font-weight:400;}
   .header-right{text-align:right;font-family:var(--mono);font-size:12px;color:var(--silver-dim);}
   .header-right .pos-count{color:var(--white);font-weight:600;}
 
-  /* ---------- ledger strip (kpis) ---------- */
   .ledger{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px;background:var(--panel);}
   .ledger-item{flex:1;padding:16px 20px;border-right:1px solid var(--line);}
   .ledger-item:last-child{border-right:none;}
@@ -45,7 +43,6 @@
   .ledger-input{width:120px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--mono);font-size:19px;font-weight:600;padding:3px 6px;border-radius:2px;margin-top:5px;}
   .ledger-group-label{font-family:var(--sans);font-size:11px;color:var(--silver-faint);margin:0 0 8px 2px;}
 
-  /* ---------- section header ---------- */
   .section-head{display:flex;align-items:baseline;gap:9px;margin:38px 0 12px 0;}
   .section-head .tick{width:3px;height:13px;background:var(--silver-dim);display:inline-block;}
   .section-head h2{font-size:14px;font-weight:600;color:var(--ink);margin:0;}
@@ -53,7 +50,6 @@
   .section-head .count{font-family:var(--mono);font-size:12px;color:var(--silver-faint);margin-left:auto;}
   .section-note{font-size:12px;color:var(--silver-dim);margin:-6px 0 14px 12px;}
 
-  /* ---------- table ---------- */
   table{width:100%;border-collapse:collapse;}
   .table-frame{border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--panel);}
   th{background:var(--panel-2);color:var(--silver-dim);font-weight:500;font-size:11.5px;text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);letter-spacing:0.01em;}
@@ -75,6 +71,11 @@
   .pnl.pos{color:var(--white);}
   .pnl.neg{color:var(--silver-dim);}
   .pnl.flat{color:var(--silver-faint);font-weight:400;}
+
+  .ann-ret{font-weight:600;font-size:12.5px;}
+  .ann-ret.pos{color:var(--white);}
+  .ann-ret.neg{color:var(--silver-dim);}
+  .ann-ret.flat{color:var(--silver-faint);font-weight:400;}
 
   .status-dot{font-size:10px;margin-right:6px;}
   .status-row{display:flex;align-items:center;font-size:12px;color:var(--silver-dim);white-space:nowrap;}
@@ -101,7 +102,6 @@
 
   .empty-row td{text-align:center;color:var(--silver-faint);padding:26px;font-family:var(--sans);font-size:13px;}
 
-  /* ---------- add position ---------- */
   .add-toggle{margin:14px 0 32px;}
   .add-panel{border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:16px 18px;margin:14px 0 32px;display:none;}
   .add-panel.open{display:block;}
@@ -112,7 +112,6 @@
   .field select:focus,.field input:focus{outline:none;border-color:var(--silver-dim);}
   .add-error{color:var(--silver);font-size:11.5px;margin-top:10px;font-family:var(--sans);display:none;}
 
-  /* ---------- share lots ---------- */
   .lots-panel{border:1px solid var(--line);border-radius:3px;background:var(--panel);margin-bottom:16px;}
   .lots-panel .lot-row{display:flex;align-items:center;gap:16px;padding:10px 14px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:13px;}
   .lots-panel .lot-row:last-child{border-bottom:none;}
@@ -120,13 +119,50 @@
   .lots-panel .lot-row .ls{color:var(--silver-dim);flex:1;}
   .lots-panel .lot-row .src{font-family:var(--sans);font-size:10.5px;color:var(--silver-faint);border:1px solid var(--line);border-radius:2px;padding:1px 6px;}
 
-  /* ---------- footer ---------- */
+  /* ---------- stat strip ---------- */
+  .stat-strip{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--panel);margin-bottom:16px;}
+  .stat-item{flex:1;padding:13px 16px;border-right:1px solid var(--line);}
+  .stat-item:last-child{border-right:none;}
+  .stat-item .label{font-size:11px;color:var(--silver-dim);}
+  .stat-item .value{font-family:var(--mono);font-size:16px;font-weight:600;margin-top:5px;color:var(--white);}
+  .stat-item .value.dim{color:var(--silver-faint);font-weight:500;}
+
+  /* ---------- analytics ---------- */
+  .analytics-toggle{margin:6px 0 0 0;}
+  .analytics-body{display:none;margin-top:16px;}
+  .analytics-body.open{display:block;}
+  .chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px;}
+  .chart-grid.one{grid-template-columns:1fr;}
+  .chart-grid.three{grid-template-columns:repeat(3,1fr);}
+  .chart-card{border:1px solid var(--line);border-radius:3px;background:var(--panel);padding:14px 16px;}
+  .chart-card .ctitle{font-size:11.5px;color:var(--silver-dim);margin-bottom:10px;font-weight:500;display:flex;justify-content:space-between;align-items:baseline;}
+  .chart-card .ctitle .cval{font-family:var(--mono);font-size:12px;color:var(--white);font-weight:600;}
+  .chart-card svg{display:block;width:100%;overflow:visible;}
+  .chart-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--silver-faint);margin-top:8px;font-family:var(--mono);}
+  .chart-legend .lg{display:flex;align-items:center;gap:5px;}
+  .chart-legend .sw{width:9px;height:9px;border-radius:1px;display:inline-block;}
+  .ticker-bars{display:flex;flex-direction:column;gap:7px;}
+  .ticker-bar-row{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11.5px;}
+  .ticker-bar-row .tb-t{width:52px;color:var(--white);font-weight:600;}
+  .ticker-bar-row .tb-track{flex:1;height:12px;background:var(--panel-2);border-radius:1px;overflow:hidden;}
+  .ticker-bar-row .tb-fill{height:100%;background:var(--silver);}
+  .ticker-bar-row .tb-v{width:70px;text-align:right;color:var(--silver-dim);font-size:11px;}
+
   .foot-note{margin-top:22px;font-size:11.5px;color:var(--silver-faint);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:16px;}
   .foot-note .note{max-width:520px;color:var(--silver-faint);}
   .refresh-btn{background:transparent;border:1px solid var(--line);color:var(--silver-dim);font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:2px;cursor:pointer;}
   .refresh-btn:hover{color:var(--white);border-color:var(--silver-dim);}
   .refresh-btn:disabled{opacity:0.4;cursor:default;}
 
+  .note-cell{cursor:text;color:var(--silver-faint);font-family:var(--sans);font-size:11px;border-bottom:1px dotted var(--silver-faint);max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;}
+  .note-cell:hover{color:var(--silver);}
+  .note-input{width:180px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--sans);font-size:11px;padding:3px 5px;border-radius:2px;}
+
+  @media (max-width:900px){
+    .chart-grid,.chart-grid.three{grid-template-columns:1fr;}
+    .stat-strip{flex-wrap:wrap;}
+    .stat-item{flex:1 1 33%;border-bottom:1px solid var(--line);}
+  }
   @media (max-width:720px){
     .ledger{flex-wrap:wrap;}
     .ledger-item{flex:1 1 50%;border-bottom:1px solid var(--line);}
@@ -152,6 +188,7 @@
       <div style="margin-top:8px;">
         <button class="btn" id="save-btn" title="Download all current data as a JSON file">↓ save</button>
         <button class="btn" id="load-btn" title="Restore data from a previously saved JSON file">↑ load</button>
+        <button class="btn" id="csv-btn" title="Export closed trades as CSV">↓ csv</button>
         <input type="file" id="load-input" accept="application/json" style="display:none;">
       </div>
       <div style="margin-top:4px;font-size:10.5px;color:var(--silver-faint);" id="autosave-status">—</div>
@@ -205,6 +242,103 @@
     </div>
   </div>
 
+  <div class="ledger-group-label" style="margin-top:16px;">Cash &amp; buying power</div>
+  <div class="stat-strip">
+    <div class="stat-item"><div class="label">Cash available</div><div class="value" id="cash-available">—</div></div>
+    <div class="stat-item"><div class="label">CSP collateral held</div><div class="value dim" id="cash-collateral">—</div></div>
+    <div class="stat-item"><div class="label">Share lots at basis</div><div class="value dim" id="cash-lots">—</div></div>
+    <div class="stat-item"><div class="label">Premium collected (open + closed)</div><div class="value" id="cash-premium">—</div></div>
+    <div class="stat-item"><div class="label">Portfolio ann. yield</div><div class="value" id="port-ann-yield">—</div></div>
+  </div>
+
+  <div class="ledger-group-label" style="margin-top:16px;">Performance</div>
+  <div class="stat-strip">
+    <div class="stat-item"><div class="label">Closed trades</div><div class="value" id="perf-count">—</div></div>
+    <div class="stat-item"><div class="label">Win rate</div><div class="value" id="perf-winrate">—</div></div>
+    <div class="stat-item"><div class="label">Avg win</div><div class="value" id="perf-avgwin">—</div></div>
+    <div class="stat-item"><div class="label">Avg loss</div><div class="value" id="perf-avgloss">—</div></div>
+    <div class="stat-item"><div class="label">Profit factor</div><div class="value" id="perf-pf">—</div></div>
+    <div class="stat-item"><div class="label">Expectancy / trade</div><div class="value" id="perf-exp">—</div></div>
+  </div>
+
+  <!-- ============ ANALYTICS ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Analytics</h2>
+    <span class="count" id="analytics-count-label"></span>
+  </div>
+  <div class="analytics-toggle"><button class="btn" id="analytics-toggle">show charts</button></div>
+  <div class="analytics-body" id="analytics-body">
+
+    <div class="chart-grid one">
+      <div class="chart-card">
+        <div class="ctitle"><span>Equity curve — account value over closed trades</span><span class="cval" id="eq-curve-val"></span></div>
+        <div id="eq-curve-chart"></div>
+        <div class="chart-legend">
+          <span class="lg"><span class="sw" style="background:var(--white);"></span>account value</span>
+          <span class="lg"><span class="sw" style="background:var(--silver-faint);"></span>starting balance</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="ctitle"><span>P&amp;L by strategy</span><span class="cval" id="strat-pnl-val"></span></div>
+        <div id="strat-pnl-chart"></div>
+      </div>
+      <div class="chart-card">
+        <div class="ctitle"><span>Monthly realized P&amp;L</span><span class="cval" id="monthly-pnl-val"></span></div>
+        <div id="monthly-chart"></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="ctitle"><span>Win / loss distribution</span><span class="cval" id="hist-val"></span></div>
+        <div id="hist-chart"></div>
+      </div>
+      <div class="chart-card">
+        <div class="ctitle"><span>Capital deployment</span><span class="cval" id="donut-val"></span></div>
+        <div id="donut-chart"></div>
+        <div class="chart-legend" id="donut-legend"></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="ctitle"><span>DTE distribution (open positions)</span><span class="cval" id="dte-val"></span></div>
+        <div id="dte-chart"></div>
+      </div>
+      <div class="chart-card">
+        <div class="ctitle"><span>Cumulative premium + dividends</span><span class="cval" id="cum-prem-val"></span></div>
+        <div id="cum-prem-chart"></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="ctitle"><span>Annualized return vs DTE (open)</span><span class="cval" id="scatter-val"></span></div>
+        <div id="scatter-chart"></div>
+        <div class="chart-legend">
+          <span class="lg"><span class="sw" style="background:var(--white);"></span>long</span>
+          <span class="lg"><span class="sw" style="background:var(--silver);"></span>CSP</span>
+          <span class="lg"><span class="sw" style="background:var(--silver-faint);"></span>CC</span>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="ctitle"><span>Capital at risk per ticker</span><span class="cval" id="tick-exp-val"></span></div>
+        <div id="ticker-bars" class="ticker-bars"></div>
+      </div>
+    </div>
+
+    <div class="chart-grid one">
+      <div class="chart-card">
+        <div class="ctitle"><span>Per-ticker rollup</span><span class="cval" id="tick-roll-val"></span></div>
+        <div id="ticker-rollup"></div>
+      </div>
+    </div>
+
+  </div>
+
   <!-- ============ DIVIDENDS & INTEREST ============ -->
   <div class="section-head">
     <span class="tick"></span><h2>Dividends &amp; interest</h2>
@@ -237,7 +371,7 @@
     <table id="long-table">
       <thead><tr>
         <th>Contract</th><th>Underlying</th><th>Strike</th><th>Expiry</th><th>Qty</th>
-        <th>Entry</th><th>Mark</th><th>P&L</th><th>Status</th><th></th>
+        <th>Entry</th><th>Mark</th><th>P&L</th><th>Ann. return</th><th>Status</th><th>Notes</th><th></th>
       </tr></thead>
       <tbody id="long-body"></tbody>
     </table>
@@ -266,7 +400,7 @@
     <table id="csp-table">
       <thead><tr>
         <th>Contract</th><th>Underlying</th><th>Strike</th><th>Expiry</th><th>Qty</th>
-        <th>Collateral</th><th>Entry</th><th>Mark</th><th>P&L</th><th>Status</th><th></th>
+        <th>Collateral</th><th>Entry</th><th>Mark</th><th>P&L</th><th>Ann. return</th><th>Status</th><th>Notes</th><th></th>
       </tr></thead>
       <tbody id="csp-body"></tbody>
     </table>
@@ -307,7 +441,7 @@
     <table id="cc-table">
       <thead><tr>
         <th>Contract</th><th>Underlying</th><th>Strike</th><th>Expiry</th><th>Qty</th>
-        <th>Entry</th><th>Mark</th><th>P&L</th><th>Status</th><th></th>
+        <th>Entry</th><th>Mark</th><th>P&L</th><th>Ann. return</th><th>Status</th><th>Notes</th><th></th>
       </tr></thead>
       <tbody id="cc-body"></tbody>
     </table>
@@ -346,7 +480,7 @@
     <button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes">↻ refresh quotes</button>
   </div>
   <div class="foot-note" style="border-top:none;padding-top:0;">
-    <span class="note">Autosaves to your browser automatically once this is hosted for real (e.g. on GitHub Pages) — Claude's own artifact preview blocks that, so <b>save</b>/<b>load</b> still work everywhere as a manual backup.</span>
+    <span class="note">Autosaves to your browser automatically once this is hosted for real (e.g. on GitHub Pages) — Claude's own artifact preview blocks that, so <b>save</b>/<b>load</b>/<b>csv</b> still work everywhere as a manual backup.</span>
   </div>
 
 </div>
@@ -360,21 +494,24 @@
   const CALL_GAP_MS  = 100;
   const STORAGE_KEY  = 'options-journal-state-v1';
 
-  // ================= STATE (in-memory only) =================
+  // ================= STATE =================
   let startingBalance = 20000;
 
   let longs = [
-    { id:1, ticker:'GLXY', type:'Call', strike:20, expiry:'2026-10-16', qty:4, entry:0.50, mark:0.50 },
-    { id:2, ticker:'RKLB', type:'Call', strike:55, expiry:'2026-10-16', qty:1, entry:1.80, mark:1.80 },
-    { id:3, ticker:'SOFI', type:'Call', strike:16, expiry:'2026-10-16', qty:5, entry:0.34, mark:0.34 },
-    { id:4, ticker:'GLXY', type:'Call', strike:22, expiry:'2026-09-18', qty:3, entry:0.40, mark:0.40 }
+    { id:1, ticker:'GLXY', type:'Call', strike:20, expiry:'2026-10-16', qty:4, entry:0.50, mark:0.50, note:'' },
+    { id:2, ticker:'RKLB', type:'Call', strike:55, expiry:'2026-10-16', qty:1, entry:1.80, mark:1.80, note:'' },
+    { id:3, ticker:'SOFI', type:'Call', strike:16, expiry:'2026-10-16', qty:5, entry:0.34, mark:0.34, note:'' },
+    { id:4, ticker:'GLXY', type:'Call', strike:22, expiry:'2026-09-18', qty:3, entry:0.40, mark:0.40, note:'' }
   ];
   let csps = [];
   let ccs = [];
-  let shareLots = [];   // { id, ticker, shares, basis, source }
-  let dividends = [];   // { id, date, source, amount }
-  let recentTrades = []; // { ticker,type,strike,expiry,qty,entry,exit,closedOn,status,kind }
+  let shareLots = [];
+  let dividends = [];
+  let recentTrades = []; // { ticker,type,strike,expiry,qty,entry,exit,closedOn,status,kind,rollId?,pnl? }
   let nextId = 100;
+
+  // snapshots: { date:'YYYY-MM-DD', accountValue } — appended on each render
+  let equityHistory = [];
 
   const quoteCache = new Map();
   let apiCalls = 0;
@@ -383,7 +520,6 @@
 
   // ================= HELPERS =================
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  // side: 'long' profits when mark rises above entry. 'short' profits when mark falls below entry.
   const calcPnl = (entry, markOrExit, qty, side) =>
     side === 'short' ? (entry - markOrExit) * qty * 100 : (markOrExit - entry) * qty * 100;
 
@@ -399,6 +535,11 @@
     if (val > 0.01) return 'pos';
     if (val < -0.01) return 'neg';
     return 'flat';
+  }
+  function fmtVal(val){
+    const abs = Math.abs(val);
+    if (abs >= 1000) return (val<0?'-':'')+'$'+(abs/1000).toFixed(1)+'k';
+    return (val<0?'-$':'$')+abs.toFixed(0);
   }
   function formatDate(dateStr){
     const d = new Date(dateStr + 'T00:00:00');
@@ -420,12 +561,37 @@
     return q && q.price != null ? q.price : null;
   }
 
-  // ================= GENERIC OPEN-TABLE RENDER =================
+  function annualizedReturn(pos, side){
+    const dte = daysToExpiry(pos.expiry);
+    if (dte <= 0) return null;
+    const capital = side === 'long' ? pos.entry * pos.qty * 100 : pos.strike * pos.qty * 100;
+    if (capital <= 0) return null;
+    const pnl = calcPnl(pos.entry, pos.mark, pos.qty, side);
+    const periodReturn = pnl / capital;
+    const annualized = periodReturn * (365 / dte);
+    return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital };
+  }
+
+  function annReturnCell(pos, side){
+    const r = annualizedReturn(pos, side);
+    if (!r) return `<span class="ann-ret flat">—</span>`;
+    const cls = pnlClass(r.pct);
+    const sign = r.pct > 0 ? '+' : '';
+    return `<span class="ann-ret ${cls}">${sign}${r.pct.toFixed(1)}%</span>`;
+  }
+
+  function tradePnl(t){
+    if (typeof t.pnl === 'number') return t.pnl;
+    const side = t.kind === 'long' ? 'long' : 'short';
+    return calcPnl(t.entry, t.exit, t.qty, side);
+  }
+
+  // ================= OPEN-TABLE RENDER =================
   function renderOpenTable(list, bodyId, side, cols){
-    // cols: function(p) -> extra <td> html between Underlying and Entry (e.g. collateral)
     const body = document.getElementById(bodyId);
+    const colCount = side === 'long' ? 12 : (bodyId === 'csp-body' ? 13 : 12);
     if (list.length === 0){
-      body.innerHTML = `<tr class="empty-row"><td colspan="11">Nothing open here yet.</td></tr>`;
+      body.innerHTML = `<tr class="empty-row"><td colspan="${colCount}">Nothing open here yet.</td></tr>`;
       return;
     }
     body.innerHTML = list.map(p => {
@@ -435,6 +601,8 @@
       const dteClass = (dte >= 0 && dte <= 3) ? 'contract-sub urgent' : 'contract-sub';
       const typeLabel = p.type ? p.type : (side === 'short' ? (bodyId.startsWith('csp') ? 'Put' : 'Call') : '');
       const extra = cols ? cols(p) : '';
+      const note = p.note || '';
+      const noteDisplay = note ? note : '—';
       return `<tr data-id="${p.id}">
         <td data-label="Contract"><span class="ticker">${p.ticker}</span><span class="${dteClass}">${typeLabel} ${p.strike} · ${dteLabel}</span></td>
         <td data-label="Underlying">
@@ -448,10 +616,13 @@
         <td data-label="Entry">$${p.entry.toFixed(2)}</td>
         <td data-label="Mark"><span class="mark-cell" data-list="${bodyId}" data-id="${p.id}" title="Click to edit">$${p.mark.toFixed(2)}</span></td>
         <td data-label="P&L"><span class="pnl ${pnlClass(pnl)}">${formatMoney(pnl)}</span></td>
+        <td data-label="Ann. return">${annReturnCell(p, side)}</td>
         <td data-label="Status">${statusRow(dte < 0 ? 'expired' : 'open')}</td>
+        <td data-label="Notes"><span class="note-cell" data-list="${bodyId}" data-id="${p.id}" title="${note.replace(/"/g,'&quot;')}">${noteDisplay}</span></td>
         <td class="actions" data-label="">
           <div class="row-actions" data-list="${bodyId}" data-id="${p.id}">
             <button class="btn close-btn" data-list="${bodyId}" data-id="${p.id}">close</button>
+            <button class="btn roll-btn" data-list="${bodyId}" data-id="${p.id}">roll</button>
             ${bodyId === 'csp-body' ? `<button class="btn assign-btn" data-id="${p.id}">assign</button>` : ''}
             ${bodyId === 'cc-body' ? `<button class="btn assign-btn cc-call" data-id="${p.id}">called away</button>` : ''}
             <button class="btn danger ghost del-btn" data-list="${bodyId}" data-id="${p.id}">delete</button>
@@ -505,10 +676,12 @@
     panel.innerHTML = shareLots.map(l => {
       const q = getQuotePrice(l.ticker);
       const mktLabel = q != null ? ` · mkt $${q.toFixed(2)}` : '';
+      const unreal = q != null ? (q - l.basis) * l.shares : 0;
+      const unrealLabel = q != null ? ` · <span class="pnl ${pnlClass(unreal)}">${formatMoney(unreal)}</span>` : '';
       return `
       <div class="lot-row">
         <span class="lt">${l.ticker}</span>
-        <span class="ls">${l.shares} sh · cost basis $${l.basis.toFixed(2)}${mktLabel}</span>
+        <span class="ls">${l.shares} sh · cost basis $${l.basis.toFixed(2)}${mktLabel}${unrealLabel}</span>
         <span class="src">${l.source}</span>
         <button class="btn danger ghost lot-del-btn" data-id="${l.id}" style="margin:0;">remove</button>
       </div>`;
@@ -533,21 +706,18 @@
 
   function renderRecent(){
     const body = document.getElementById('recent-body');
+    document.getElementById('recent-count-label').textContent = recentTrades.length + ' closed';
     if (recentTrades.length === 0){
       body.innerHTML = `<tr class="empty-row"><td colspan="9">No closed trades yet.</td></tr>`;
       return;
     }
     body.innerHTML = recentTrades.slice().reverse().map(t => {
-      const side = t.kind === 'long' ? 'long' : 'short';
-      // For share-leg entries, we stored an explicit pnl to avoid ambiguity
-      const pnl = (typeof t.pnl === 'number')
-        ? t.pnl
-        : calcPnl(t.entry, t.exit, t.qty, side);
+      const pnl = tradePnl(t);
       const typeLabel = t.type || '';
       const strikeLabel = (typeof t.strike === 'number' && t.strike > 0) ? `$${t.strike.toFixed(2)}` : '—';
       return `<tr>
         <td data-label="Contract"><span class="ticker">${t.ticker}</span><span class="contract-sub">${typeLabel}${typeLabel ? ' ' : ''}${t.strike ? t.strike : ''}</span></td>
-        <td data-label="Strategy">${kindLabel(t.kind)}</td>
+        <td data-label="Strategy">${kindLabel(t.kind)}${t.rolled ? ' <span style="color:var(--silver-faint);font-size:10px;">(rolled)</span>' : ''}</td>
         <td data-label="Strike">${strikeLabel}</td>
         <td data-label="Closed">${formatDate(t.closedOn)}</td>
         <td data-label="Qty">${t.qty}</td>
@@ -559,7 +729,8 @@
     }).join('');
   }
 
-  function renderLedgers(){
+  // ================= DERIVED NUMBERS =================
+  function computeTotals(){
     const openRiskLong = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
     const openRiskCsp  = csps.reduce((a,p) => a + p.strike*p.qty*100, 0);
     const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
@@ -570,46 +741,632 @@
       csps.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0) +
       ccs.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0);
 
-    const realized = recentTrades.reduce((a,t) => {
-      if (typeof t.pnl === 'number') return a + t.pnl;
-      const side = t.kind === 'long' ? 'long' : 'short';
-      return a + calcPnl(t.entry, t.exit, t.qty, side);
-    }, 0);
+    const realized = recentTrades.reduce((a,t) => a + tradePnl(t), 0);
 
-    // share lot unrealized, using cached quotes where available
-    const sharePnl = shareLots.reduce((a,l) => {
+    const shareUnreal = shareLots.reduce((a,l) => {
       const q = quoteCache.get(l.ticker);
       return a + (q && q.price != null ? (q.price - l.basis) * l.shares : 0);
     }, 0);
 
-    const netPnl = realized + unrealized;
     const dividendsTotal = dividends.reduce((a,d) => a + d.amount, 0);
-    const ytd = netPnl + sharePnl + dividendsTotal;
+    const netPnl = realized + unrealized;
+    const ytd = netPnl + shareUnreal + dividendsTotal;
     const accountValue = startingBalance + ytd;
+
+    // cash: starting + all premiums collected (open + closed) + dividends
+    //       − collateral tied up − share lots cost − open long premium paid
+    const premiumCollectedOpen =
+      csps.reduce((a,p) => a + p.entry*p.qty*100, 0) +
+      ccs.reduce((a,p) => a + p.entry*p.qty*100, 0);
+    const premiumCollectedClosed = recentTrades
+      .filter(t => t.kind==='csp' || t.kind==='cc')
+      .reduce((a,t) => a + t.entry*t.qty*100, 0);
+    const longPremiumPaid = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
+    const cashAvailable = startingBalance
+      + premiumCollectedOpen + premiumCollectedClosed
+      + realized + dividendsTotal
+      - openRiskCsp
+      - openRiskLots
+      - longPremiumPaid;
+
+    // portfolio annualized yield: sum of per-position annualized P&L / capital deployed
+    let annPnlSum = 0;
+    let annCapSum = 0;
+    [...longs].forEach(p => { const r = annualizedReturn(p,'long'); if (r){ annPnlSum += r.pct/100 * r.capital; annCapSum += r.capital; } });
+    [...csps, ...ccs].forEach(p => { const r = annualizedReturn(p,'short'); if (r){ annPnlSum += r.pct/100 * r.capital; annCapSum += r.capital; } });
+    const portfolioAnnYield = annCapSum > 0 ? (annPnlSum / annCapSum) * 100 : 0;
+
+    // performance stats over closed option trades only (exclude share legs to avoid double-count)
+    const optionTrades = recentTrades.filter(t => t.kind==='long' || t.kind==='csp' || t.kind==='cc');
+    const wins = optionTrades.filter(t => tradePnl(t) > 0.005);
+    const losses = optionTrades.filter(t => tradePnl(t) < -0.005);
+    const winRate = optionTrades.length ? wins.length / optionTrades.length * 100 : 0;
+    const avgWin = wins.length ? wins.reduce((a,t)=>a+tradePnl(t),0)/wins.length : 0;
+    const avgLoss = losses.length ? losses.reduce((a,t)=>a+tradePnl(t),0)/losses.length : 0;
+    const grossWin = wins.reduce((a,t)=>a+tradePnl(t),0);
+    const grossLoss = Math.abs(losses.reduce((a,t)=>a+tradePnl(t),0));
+    const profitFactor = grossLoss > 0 ? grossWin/grossLoss : (grossWin > 0 ? Infinity : 0);
+    const expectancy = optionTrades.length ? optionTrades.reduce((a,t)=>a+tradePnl(t),0)/optionTrades.length : 0;
+
+    return {
+      openRiskLong, openRiskCsp, openRiskLots, capitalDeployed,
+      unrealized, realized, shareUnreal, dividendsTotal, netPnl, ytd, accountValue,
+      premiumCollectedOpen, premiumCollectedClosed, longPremiumPaid, cashAvailable,
+      portfolioAnnYield, openRiskCspForCash: openRiskCsp,
+      optionTrades, wins, losses, winRate, avgWin, avgLoss, profitFactor, expectancy
+    };
+  }
+
+  function renderLedgers(){
+    const T = computeTotals();
 
     const setVal = (id, val) => {
       const el = document.getElementById(id);
       el.textContent = formatMoney(val);
       el.className = 'value ' + (val < -0.01 ? 'dim' : '');
     };
-    setVal('net-pnl', netPnl);
-    setVal('realized-pnl', realized);
-    setVal('unrealized-pnl', unrealized);
-    setVal('ytd-pnl', ytd);
+    setVal('net-pnl', T.netPnl);
+    setVal('realized-pnl', T.realized);
+    setVal('unrealized-pnl', T.unrealized);
+    setVal('ytd-pnl', T.ytd);
 
     document.getElementById('starting-balance').textContent = formatPlain(startingBalance);
-    document.getElementById('account-value').textContent = formatPlain(Math.max(accountValue,0));
-    document.getElementById('open-risk').textContent = formatPlain(capitalDeployed);
+    document.getElementById('account-value').textContent = formatPlain(Math.max(T.accountValue,0));
+    document.getElementById('open-risk').textContent = formatPlain(T.capitalDeployed);
     document.getElementById('open-risk-sub').textContent = (longs.length+csps.length) + ' open, ' + shareLots.length + ' lot' + (shareLots.length===1?'':'s');
     document.getElementById('realized-sub').textContent = recentTrades.length + ' closed';
     document.getElementById('unrealized-sub').textContent = (longs.length+csps.length+ccs.length) + ' open';
-    document.getElementById('ytd-pct').textContent = startingBalance > 0 ? (ytd/startingBalance*100 >= 0 ? '+' : '') + (ytd/startingBalance*100).toFixed(1) + '% of starting balance' : '—';
-    document.getElementById('div-total').textContent = '+$' + dividendsTotal.toFixed(2);
+    document.getElementById('ytd-pct').textContent = startingBalance > 0 ? (T.ytd/startingBalance*100 >= 0 ? '+' : '') + (T.ytd/startingBalance*100).toFixed(1) + '% of starting balance' : '—';
+    document.getElementById('div-total').textContent = '+$' + T.dividendsTotal.toFixed(2);
     document.getElementById('div-sub').textContent = dividends.length + ' payout' + (dividends.length===1?'':'s') + ' logged';
-
     document.getElementById('pos-count').textContent = longs.length + csps.length + ccs.length;
+
+    // cash strip
+    const cashEl = document.getElementById('cash-available');
+    cashEl.textContent = formatPlain(Math.max(T.cashAvailable,0));
+    cashEl.className = 'value ' + (T.cashAvailable < 0 ? 'dim' : '');
+    document.getElementById('cash-collateral').textContent = formatPlain(T.openRiskCspForCash);
+    document.getElementById('cash-lots').textContent = formatPlain(T.openRiskLots);
+    document.getElementById('cash-premium').textContent = formatPlain(T.premiumCollectedOpen + T.premiumCollectedClosed);
+    const pyEl = document.getElementById('port-ann-yield');
+    pyEl.textContent = (T.portfolioAnnYield >= 0 ? '+' : '') + T.portfolioAnnYield.toFixed(1) + '%';
+    pyEl.className = 'value ' + (T.portfolioAnnYield < -0.01 ? 'dim' : '');
+
+    // performance strip
+    document.getElementById('perf-count').textContent = T.optionTrades.length;
+    document.getElementById('perf-winrate').textContent = T.optionTrades.length ? T.winRate.toFixed(0) + '%' : '—';
+    document.getElementById('perf-avgwin').textContent = T.wins.length ? formatMoney(T.avgWin) : '—';
+    document.getElementById('perf-avgloss').textContent = T.losses.length ? formatMoney(T.avgLoss) : '—';
+    const pfEl = document.getElementById('perf-pf');
+    pfEl.textContent = T.profitFactor === Infinity ? '∞' : (T.optionTrades.length ? T.profitFactor.toFixed(2) : '—');
+    pfEl.className = 'value ' + (T.profitFactor < 1 ? 'dim' : '');
+    document.getElementById('perf-exp').textContent = T.optionTrades.length ? formatMoney(T.expectancy) : '—';
+
+    return T;
   }
 
+  // ================= EQUITY HISTORY =================
+  function snapshotEquity(accountValue){
+    const today = new Date().toISOString().slice(0,10);
+    const last = equityHistory[equityHistory.length-1];
+    if (last && last.date === today){
+      last.accountValue = accountValue;
+    } else {
+      equityHistory.push({ date: today, accountValue });
+    }
+    if (equityHistory.length > 720) equityHistory = equityHistory.slice(-720);
+  }
+
+  // ================= CHARTS (inline SVG) =================
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs){
+    const e = document.createElementNS(SVGNS, tag);
+    if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function niceAxis(min, max, ticks){
+    if (min === max){ min -= 1; max += 1; }
+    const range = max - min;
+    const step = Math.pow(10, Math.floor(Math.log10(range/ticks)));
+    const err = range/(ticks*step);
+    let mult = 1;
+    if (err >= 7.5) mult = 10; else if (err >= 3) mult = 5; else if (err >= 1.5) mult = 2;
+    const niceStep = mult * step;
+    const niceMin = Math.floor(min/niceStep)*niceStep;
+    const niceMax = Math.ceil(max/niceStep)*niceStep;
+    return { min: niceMin, max: niceMax, step: niceStep };
+  }
+
+  function renderEquityCurve(){
+    const host = document.getElementById('eq-curve-chart');
+    host.innerHTML = '';
+    const W = host.clientWidth || 900, H = 200, P = { l: 56, r: 12, t: 10, b: 24 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+
+    let pts;
+    // If we have no history yet, synthesize from closed trades so the chart isn't empty.
+    if (equityHistory.length >= 2){
+      pts = equityHistory.map(h => ({ date:h.date, v:h.accountValue }));
+    } else {
+      // build step curve from realized events by date
+      const events = [];
+      events.push({ date:'1970-01-01', v:0 });
+      let running = 0;
+      const sorted = recentTrades.slice().sort((a,b) => a.closedOn.localeCompare(b.closedOn));
+      sorted.forEach(t => { running += tradePnl(t); events.push({ date:t.closedOn, v:running }); });
+      // dividends
+      dividends.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(d => { running += d.amount; events.push({ date:d.date, v:running }); });
+      pts = events.map(e => ({ date:e.date, v:startingBalance + e.v }));
+      if (pts.length < 2) pts = [{date:'start', v:startingBalance}, {date:'now', v:startingBalance}];
+    }
+
+    const vals = pts.map(p => p.v);
+    const ax = niceAxis(Math.min(...vals, startingBalance), Math.max(...vals, startingBalance), 4);
+    const x = i => P.l + (W-P.l-P.r) * (pts.length === 1 ? 0.5 : i/(pts.length-1));
+    const y = v => P.t + (H-P.t-P.b) * (1 - (v - ax.min)/(ax.max - ax.min));
+
+    // grid + y labels
+    for (let v = ax.min; v <= ax.max + 1e-6; v += ax.step){
+      const yy = y(v);
+      svg.appendChild(svgEl('line', { x1:P.l, x2:W-P.r, y1:yy, y2:yy, stroke:'#e8e8e5', 'stroke-width':1 }));
+      const t = svgEl('text', { x:P.l-8, y:yy+3, 'text-anchor':'end', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+      t.textContent = fmtVal(v);
+      svg.appendChild(t);
+    }
+
+    // starting balance reference line
+    const yStart = y(startingBalance);
+    svg.appendChild(svgEl('line', { x1:P.l, x2:W-P.r, y1:yStart, y2:yStart, stroke:'#a2a5a8', 'stroke-width':1, 'stroke-dasharray':'3 3' }));
+
+    // area + line
+    const d = pts.map((p,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+    const areaD = d + ` L${x(pts.length-1).toFixed(1)},${y(ax.min).toFixed(1)} L${x(0).toFixed(1)},${y(ax.min).toFixed(1)} Z`;
+    svg.appendChild(svgEl('path', { d:areaD, fill:'#f1f1ef', stroke:'none' }));
+    svg.appendChild(svgEl('path', { d, fill:'none', stroke:'#0a0a0b', 'stroke-width':1.5 }));
+
+    // last point marker + label
+    const lastPt = pts[pts.length-1];
+    svg.appendChild(svgEl('circle', { cx:x(pts.length-1), cy:y(lastPt.v), r:2.5, fill:'#0a0a0b' }));
+
+    host.appendChild(svg);
+    const lastVal = lastPt.v;
+    document.getElementById('eq-curve-val').textContent = formatPlain(lastVal) + ' · ' + ((lastVal-startingBalance>=0?'+':'') + ((lastVal-startingBalance)/startingBalance*100).toFixed(1) + '%');
+  }
+
+  function renderStrategyPnl(T){
+    const host = document.getElementById('strat-pnl-chart');
+    host.innerHTML = '';
+
+    // realized + unrealized per strategy
+    const strat = {
+      'Long': { realized:0, unreal:0, color:'#0a0a0b' },
+      'CSP':  { realized:0, unreal:0, color:'#54575c' },
+      'CC':   { realized:0, unreal:0, color:'#797c80' },
+      'Shares': { realized:0, unreal:0, color:'#a2a5a8' },
+      'Dividends': { realized:0, unreal:0, color:'#dcdcd9' }
+    };
+    recentTrades.forEach(t => {
+      const p = tradePnl(t);
+      if (t.kind==='long') strat['Long'].realized += p;
+      else if (t.kind==='csp') strat['CSP'].realized += p;
+      else if (t.kind==='cc') strat['CC'].realized += p;
+      else strat['Shares'].realized += p;
+    });
+    strat['Dividends'].realized = T.dividendsTotal;
+    longs.forEach(p => strat['Long'].unreal += calcPnl(p.entry,p.mark,p.qty,'long'));
+    csps.forEach(p => strat['CSP'].unreal += calcPnl(p.entry,p.mark,p.qty,'short'));
+    ccs.forEach(p => strat['CC'].unreal += calcPnl(p.entry,p.mark,p.qty,'short'));
+    strat['Shares'].unreal = T.shareUnreal;
+
+    const rows = Object.entries(strat).map(([k,v]) => ({ name:k, total:v.realized+v.unreal, ...v }));
+    const W = host.clientWidth || 480, rowH = 30, H = rows.length*rowH + 20, P = { l:76, r:60, t:6, b:6 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+
+    const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.total)));
+    const zeroX = P.l + (W-P.l-P.r) * (0 - (-maxAbs))/(2*maxAbs);
+
+    rows.forEach((r, i) => {
+      const yy = P.t + i*rowH + rowH/2;
+      const label = svgEl('text', { x:P.l-10, y:yy+3.5, 'text-anchor':'end', 'font-size':11, fill:'#54575c', 'font-family':'sans-serif' });
+      label.textContent = r.name;
+      svg.appendChild(label);
+
+      // track
+      const trackY = yy - 7;
+      const trackX = P.l;
+      const trackW = W - P.l - P.r;
+      svg.appendChild(svgEl('rect', { x:trackX, y:trackY, width:trackW, height:14, fill:'#f1f1ef' }));
+
+      const valX = P.l + trackW * ((0+maxAbs)/(2*maxAbs));
+      const valW = trackW * (Math.abs(r.total)/(2*maxAbs));
+      const barX = r.total >= 0 ? valX : valX - valW;
+      svg.appendChild(svgEl('rect', { x:barX, y:trackY, width:valW, height:14, fill: r.total >= 0 ? '#0a0a0b' : '#a2a5a8' }));
+
+      const val = svgEl('text', { x:W-P.r+4, y:yy+3.5, 'font-size':11, fill: r.total < 0 ? '#797c80' : '#0a0a0b', 'font-family':'monospace', 'text-anchor':'start' });
+      val.textContent = formatMoney(r.total);
+      svg.appendChild(val);
+    });
+
+    // zero line
+    svg.appendChild(svgEl('line', { x1:zeroX, x2:zeroX, y1:P.t, y2:H-P.b, stroke:'#dcdcd9', 'stroke-width':1 }));
+
+    host.appendChild(svg);
+    const total = rows.reduce((a,r)=>a+r.total,0);
+    document.getElementById('strat-pnl-val').textContent = formatMoney(total);
+  }
+
+  function renderMonthlyPnl(T){
+    const host = document.getElementById('monthly-chart');
+    host.innerHTML = '';
+    const byMonth = new Map();
+    recentTrades.forEach(t => {
+      const m = t.closedOn.slice(0,7);
+      byMonth.set(m, (byMonth.get(m)||0) + tradePnl(t));
+    });
+    dividends.forEach(d => {
+      const m = d.date.slice(0,7);
+      byMonth.set(m, (byMonth.get(m)||0) + d.amount);
+    });
+    if (byMonth.size === 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">No closed trades yet.</div>';
+      document.getElementById('monthly-pnl-val').textContent = '—';
+      return;
+    }
+    const months = [...byMonth.keys()].sort();
+    const vals = months.map(m => byMonth.get(m));
+    const W = host.clientWidth || 480, H = 180, P = { l:56, r:12, t:10, b:26 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+
+    const ax = niceAxis(Math.min(0, ...vals), Math.max(0, ...vals), 4);
+    const y = v => P.t + (H-P.t-P.b) * (1 - (v - ax.min)/(ax.max - ax.min));
+
+    for (let v = ax.min; v <= ax.max + 1e-6; v += ax.step){
+      const yy = y(v);
+      svg.appendChild(svgEl('line', { x1:P.l, x2:W-P.r, y1:yy, y2:yy, stroke:'#e8e8e5', 'stroke-width':1 }));
+      const t = svgEl('text', { x:P.l-8, y:yy+3, 'text-anchor':'end', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+      t.textContent = fmtVal(v);
+      svg.appendChild(t);
+    }
+
+    const barW = (W-P.l-P.r)/months.length * 0.6;
+    const gap = (W-P.l-P.r)/months.length;
+    const zeroY = y(0);
+    months.forEach((m, i) => {
+      const v = vals[i];
+      const cx = P.l + gap*i + gap/2;
+      const top = v >= 0 ? y(v) : zeroY;
+      const h = Math.abs(y(v) - zeroY);
+      svg.appendChild(svgEl('rect', { x:cx-barW/2, y:top, width:barW, height:h, fill: v>=0 ? '#0a0a0b' : '#a2a5a8' }));
+      const lbl = svgEl('text', { x:cx, y:H-P.b+14, 'text-anchor':'middle', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+      lbl.textContent = m.slice(2);
+      svg.appendChild(lbl);
+    });
+
+    svg.appendChild(svgEl('line', { x1:P.l, x2:W-P.r, y1:zeroY, y2:zeroY, stroke:'#dcdcd9' }));
+    host.appendChild(svg);
+    document.getElementById('monthly-pnl-val').textContent = formatMoney(vals.reduce((a,b)=>a+b,0));
+  }
+
+  function renderHistogram(T){
+    const host = document.getElementById('hist-chart');
+    host.innerHTML = '';
+    const trades = T.optionTrades;
+    if (trades.length === 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">No closed trades yet.</div>';
+      document.getElementById('hist-val').textContent = '—';
+      return;
+    }
+    const pnls = trades.map(tradePnl);
+    const min = Math.min(...pnls), max = Math.max(...pnls);
+    const bins = 7;
+    const range = max - min || 1;
+    const step = range / bins;
+    const buckets = new Array(bins).fill(0);
+    pnls.forEach(v => {
+      let idx = Math.floor((v - min)/step);
+      if (idx >= bins) idx = bins-1;
+      if (idx < 0) idx = 0;
+      buckets[idx]++;
+    });
+
+    const W = host.clientWidth || 480, H = 180, P = { l:40, r:12, t:10, b:30 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+    const maxCount = Math.max(1, ...buckets);
+    const barW = (W-P.l-P.r)/bins * 0.8;
+    const gap = (W-P.l-P.r)/bins;
+
+    for (let i=0;i<bins;i++){
+      const h = (H-P.t-P.b) * (buckets[i]/maxCount);
+      const cx = P.l + gap*i + gap/2;
+      const lo = min + step*i;
+      const isPos = (lo + step/2) >= 0;
+      svg.appendChild(svgEl('rect', { x:cx-barW/2, y:H-P.b-h, width:barW, height:h, fill: isPos ? '#0a0a0b' : '#a2a5a8' }));
+      if (buckets[i] > 0){
+        const ct = svgEl('text', { x:cx, y:H-P.b-h-3, 'text-anchor':'middle', 'font-size':10, fill:'#797c80', 'font-family':'monospace' });
+        ct.textContent = buckets[i];
+        svg.appendChild(ct);
+      }
+    }
+    // x labels at ends
+    const t0 = svgEl('text', { x:P.l, y:H-P.b+14, 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+    t0.textContent = fmtVal(min);
+    svg.appendChild(t0);
+    const t1 = svgEl('text', { x:W-P.r, y:H-P.b+14, 'text-anchor':'end', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+    t1.textContent = fmtVal(max);
+    svg.appendChild(t1);
+
+    // zero line
+    const zeroX = P.l + (W-P.l-P.r) * ((0 - min)/range);
+    if (zeroX > P.l && zeroX < W-P.r){
+      svg.appendChild(svgEl('line', { x1:zeroX, x2:zeroX, y1:P.t, y2:H-P.b, stroke:'#dcdcd9', 'stroke-dasharray':'3 3' }));
+    }
+    host.appendChild(svg);
+    document.getElementById('hist-val').textContent = trades.length + ' trades';
+  }
+
+  function renderDonut(T){
+    const host = document.getElementById('donut-chart');
+    const legend = document.getElementById('donut-legend');
+    host.innerHTML = ''; legend.innerHTML = '';
+
+    const slices = [
+      { name:'CSP collateral', v:T.openRiskCsp, color:'#0a0a0b' },
+      { name:'Share lots', v:T.openRiskLots, color:'#54575c' },
+      { name:'Long premium', v:T.openRiskLong, color:'#a2a5a8' },
+      { name:'Cash', v:Math.max(0, T.cashAvailable), color:'#e8e8e5' }
+    ].filter(s => s.v > 0);
+
+    const total = slices.reduce((a,s)=>a+s.v,0);
+    if (total <= 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">Nothing deployed yet.</div>';
+      document.getElementById('donut-val').textContent = '—';
+      return;
+    }
+    const W = host.clientWidth || 240, H = 180;
+    const size = Math.min(W, H) - 10;
+    const cx = W/2, cy = H/2, r = size/2, ir = r*0.62;
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, height:H });
+
+    let angle = -Math.PI/2;
+    slices.forEach(s => {
+      const frac = s.v/total;
+      const a2 = angle + frac*Math.PI*2;
+      const large = frac > 0.5 ? 1 : 0;
+      const x1 = cx + r*Math.cos(angle), y1 = cy + r*Math.sin(angle);
+      const x2 = cx + r*Math.cos(a2),   y2 = cy + r*Math.sin(a2);
+      const x3 = cx + ir*Math.cos(a2),  y3 = cy + ir*Math.sin(a2);
+      const x4 = cx + ir*Math.cos(angle), y4 = cy + ir*Math.sin(angle);
+      const d = `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${x3},${y3} A${ir},${ir} 0 ${large} 0 ${x4},${y4} Z`;
+      svg.appendChild(svgEl('path', { d, fill:s.color }));
+      angle = a2;
+    });
+
+    const label = svgEl('text', { x:cx, y:cy-2, 'text-anchor':'middle', 'font-size':14, fill:'#0a0a0b', 'font-family':'monospace', 'font-weight':600 });
+    label.textContent = fmtVal(total);
+    svg.appendChild(label);
+    const sub = svgEl('text', { x:cx, y:cy+13, 'text-anchor':'middle', 'font-size':9.5, fill:'#a2a5a8', 'font-family':'sans-serif' });
+    sub.textContent = 'deployed';
+    svg.appendChild(sub);
+
+    host.appendChild(svg);
+    legend.innerHTML = slices.map(s =>
+      `<span class="lg"><span class="sw" style="background:${s.color};border:1px solid #dcdcd9;"></span>${s.name} ${(s.v/total*100).toFixed(0)}%</span>`
+    ).join('');
+    document.getElementById('donut-val').textContent = fmtVal(total);
+  }
+
+  function renderDteDist(){
+    const host = document.getElementById('dte-chart');
+    host.innerHTML = '';
+    const pos = [...longs.map(p=>({...p,side:'long',strat:'Long'})),
+                 ...csps.map(p=>({...p,side:'short',strat:'CSP'})),
+                 ...ccs.map(p=>({...p,side:'short',strat:'CC'}))];
+    const buckets = [
+      { name:'0–7d', min:0, max:7, count:0 },
+      { name:'7–14d', min:7, max:14, count:0 },
+      { name:'14–30d', min:14, max:30, count:0 },
+      { name:'30–60d', min:30, max:60, count:0 },
+      { name:'60d+', min:60, max:1e9, count:0 }
+    ];
+    pos.forEach(p => {
+      const d = daysToExpiry(p.expiry);
+      if (d < 0) return;
+      const b = buckets.find(b => d >= b.min && d < b.max);
+      if (b) b.count++;
+    });
+    const W = host.clientWidth || 480, H = 180, P = { l:40, r:12, t:10, b:30 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+    const maxCount = Math.max(1, ...buckets.map(b=>b.count));
+    const gap = (W-P.l-P.r)/buckets.length;
+    const barW = gap*0.6;
+    buckets.forEach((b,i) => {
+      const h = (H-P.t-P.b) * (b.count/maxCount);
+      const cx = P.l + gap*i + gap/2;
+      svg.appendChild(svgEl('rect', { x:cx-barW/2, y:H-P.b-h, width:barW, height:h, fill: i<=1 ? '#0a0a0b' : '#a2a5a8' }));
+      const lbl = svgEl('text', { x:cx, y:H-P.b+14, 'text-anchor':'middle', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+      lbl.textContent = b.name;
+      svg.appendChild(lbl);
+      if (b.count > 0){
+        const ct = svgEl('text', { x:cx, y:H-P.b-h-3, 'text-anchor':'middle', 'font-size':10, fill:'#797c80', 'font-family':'monospace' });
+        ct.textContent = b.count;
+        svg.appendChild(ct);
+      }
+    });
+    host.appendChild(svg);
+    const near = buckets[0].count + buckets[1].count;
+    document.getElementById('dte-val').textContent = near + ' expire ≤14d';
+  }
+
+  function renderCumPremium(T){
+    const host = document.getElementById('cum-prem-chart');
+    host.innerHTML = '';
+    const events = [];
+    // closed trades premium
+    recentTrades.forEach(t => {
+      if (t.kind==='csp' || t.kind==='cc') events.push({ date:t.closedOn, v: t.entry*t.qty*100 });
+    });
+    // open positions (assign to today, as collected but not yet realized)
+    const today = new Date().toISOString().slice(0,10);
+    csps.forEach(p => events.push({ date:today, v: p.entry*p.qty*100 }));
+    ccs.forEach(p => events.push({ date:today, v: p.entry*p.qty*100 }));
+    dividends.forEach(d => events.push({ date:d.date, v:d.amount }));
+
+    if (events.length === 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">No premiums or dividends yet.</div>';
+      document.getElementById('cum-prem-val').textContent = '—';
+      return;
+    }
+    events.sort((a,b) => a.date.localeCompare(b.date));
+    let run = 0;
+    const pts = events.map(e => { run += e.v; return { date:e.date, v:run }; });
+
+    const W = host.clientWidth || 480, H = 180, P = { l:56, r:12, t:10, b:26 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+    const min = 0, max = Math.max(...pts.map(p=>p.v), 1);
+    const ax = niceAxis(min, max, 4);
+    const y = v => P.t + (H-P.t-P.b) * (1 - (v-ax.min)/(ax.max-ax.min));
+    const x = i => P.l + (W-P.l-P.r) * (pts.length === 1 ? 0.5 : i/(pts.length-1));
+
+    for (let v=ax.min; v<=ax.max+1e-6; v+=ax.step){
+      const yy = y(v);
+      svg.appendChild(svgEl('line', { x1:P.l, x2:W-P.r, y1:yy, y2:yy, stroke:'#e8e8e5' }));
+      const t = svgEl('text', { x:P.l-8, y:yy+3, 'text-anchor':'end', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+      t.textContent = fmtVal(v);
+      svg.appendChild(t);
+    }
+    const d = pts.map((p,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+    svg.appendChild(svgEl('path', { d, fill:'none', stroke:'#0a0a0b', 'stroke-width':1.5 }));
+    host.appendChild(svg);
+    document.getElementById('cum-prem-val').textContent = '+$' + run.toFixed(0);
+  }
+
+  function renderScatter(){
+    const host = document.getElementById('scatter-chart');
+    host.innerHTML = '';
+    const pos = [
+      ...longs.map(p=>({...p,side:'long',color:'#0a0a0b'})),
+      ...csps.map(p=>({...p,side:'short',color:'#54575c'})),
+      ...ccs.map(p=>({...p,side:'short',color:'#a2a5a8'}))
+    ];
+    const pts = pos.map(p => {
+      const r = annualizedReturn(p, p.side);
+      return r ? { dte:r.dte, ann:r.pct, color:p.color, ticker:p.ticker } : null;
+    }).filter(Boolean);
+
+    if (pts.length === 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">No open positions with DTE > 0.</div>';
+      document.getElementById('scatter-val').textContent = '—';
+      return;
+    }
+    const W = host.clientWidth || 480, H = 180, P = { l:52, r:12, t:10, b:26 };
+    const svg = svgEl('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', height:H });
+    const xMax = Math.max(30, ...pts.map(p=>p.dte));
+    const yMax = Math.max(10, ...pts.map(p=>Math.abs(p.ann)));
+    const x = v => P.l + (W-P.l-P.r) * (v/xMax);
+    const y = v => P.t + (H-P.t-P.b) * (1 - (v + yMax)/(2*yMax));
+
+    // zero line
+    const zeroY = y(0);
+    svg.appendChild(svgEl('line', { x1:P.l, x2:W-P.r, y1:zeroY, y2:zeroY, stroke:'#dcdcd9' }));
+
+    // y-axis labels
+    [yMax, 0, -yMax].forEach(v => {
+      const t = svgEl('text', { x:P.l-8, y:y(v)+3, 'text-anchor':'end', 'font-size':10, fill:'#a2a5a8', 'font-family':'monospace' });
+      t.textContent = v.toFixed(0) + '%';
+      svg.appendChild(t);
+    });
+
+    pts.forEach(p => {
+      svg.appendChild(svgEl('circle', { cx:x(p.dte), cy:y(p.ann), r:4, fill:p.color, opacity:0.85 }));
+    });
+
+    host.appendChild(svg);
+    const best = pts.reduce((a,b)=> Math.abs(a.ann) > Math.abs(b.ann) ? a : b);
+    document.getElementById('scatter-val').textContent = 'top ' + (best.ann>=0?'+':'') + best.ann.toFixed(0) + '%';
+  }
+
+  function renderTickerBars(T){
+    const host = document.getElementById('ticker-bars');
+    host.innerHTML = '';
+    const map = new Map();
+    longs.forEach(p => map.set(p.ticker, (map.get(p.ticker)||0) + p.entry*p.qty*100));
+    csps.forEach(p => map.set(p.ticker, (map.get(p.ticker)||0) + p.strike*p.qty*100));
+    ccs.forEach(p => map.set(p.ticker, (map.get(p.ticker)||0) + p.strike*p.qty*100));
+    shareLots.forEach(l => map.set(l.ticker, (map.get(l.ticker)||0) + l.basis*l.shares));
+    const entries = [...map.entries()].sort((a,b)=>b[1]-a[1]);
+    if (entries.length === 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">No positions yet.</div>';
+      document.getElementById('tick-exp-val').textContent = '—';
+      return;
+    }
+    const max = entries[0][1];
+    host.innerHTML = entries.map(([t,v]) => `
+      <div class="ticker-bar-row">
+        <span class="tb-t">${t}</span>
+        <span class="tb-track"><span class="tb-fill" style="width:${(v/max*100).toFixed(0)}%"></span></span>
+        <span class="tb-v">${formatPlain(v)}</span>
+      </div>`).join('');
+    document.getElementById('tick-exp-val').textContent = entries.length + ' tickers';
+  }
+
+  function renderTickerRollup(T){
+    const host = document.getElementById('ticker-rollup');
+    host.innerHTML = '';
+    const map = new Map();
+    const get = t => { if (!map.has(t)) map.set(t, { ticker:t, contracts:0, shares:0, premium:0, realized:0, unrealized:0, capital:0 }); return map.get(t); };
+    longs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium -= p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'long'); m.capital += p.entry*p.qty*100; });
+    csps.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; });
+    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; });
+    shareLots.forEach(l => { const m=get(l.ticker); m.shares += l.shares; m.capital += l.basis*l.shares; const q=getQuotePrice(l.ticker); if (q!=null) m.unrealized += (q-l.basis)*l.shares; });
+    recentTrades.forEach(t => { const m=get(t.ticker); m.realized += tradePnl(t); });
+
+    const rows = [...map.values()].sort((a,b)=>b.capital-a.capital);
+    if (rows.length === 0){
+      host.innerHTML = '<div style="color:var(--silver-faint);font-size:12px;padding:20px 0;">No positions yet.</div>';
+      document.getElementById('tick-roll-val').textContent = '—';
+      return;
+    }
+    host.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="font-size:10.5px;color:var(--silver-faint);text-align:left;">
+        <th style="padding:6px 10px;font-weight:500;">Ticker</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Contracts</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Shares</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Capital</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Net premium</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Realized</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Unrealized</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr style="border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:12px;">
+            <td style="padding:8px 10px;color:var(--white);font-weight:600;">${r.ticker}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">${r.contracts||'—'}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">${r.shares||'—'}</td>
+            <td style="padding:8px 10px;text-align:right;">${formatPlain(r.capital)}</td>
+            <td style="padding:8px 10px;text-align:right;">${formatMoney(r.premium)}</td>
+            <td style="padding:8px 10px;text-align:right;" class="pnl ${pnlClass(r.realized)}">${formatMoney(r.realized)}</td>
+            <td style="padding:8px 10px;text-align:right;" class="pnl ${pnlClass(r.unrealized)}">${formatMoney(r.unrealized)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+    document.getElementById('tick-roll-val').textContent = rows.length + ' tickers';
+  }
+
+  function renderAnalytics(T){
+    document.getElementById('analytics-count-label').textContent = 'portfolio view';
+    renderEquityCurve();
+    renderStrategyPnl(T);
+    renderMonthlyPnl(T);
+    renderHistogram(T);
+    renderDonut(T);
+    renderDteDist();
+    renderCumPremium(T);
+    renderScatter();
+    renderTickerBars(T);
+    renderTickerRollup(T);
+  }
+
+  // ================= AUTOSAVE / RENDER =================
   function autosave(){
     const el = document.getElementById('autosave-status');
     try{
@@ -621,14 +1378,17 @@
   }
 
   function renderAll(){
+    const T = renderLedgers();
+    snapshotEquity(T.accountValue);
     renderLong();
     renderCsp();
     renderCc();
     renderLots();
     renderDividends();
     renderRecent();
-    renderLedgers();
     attachRowHandlers();
+    // re-render ledgers/analytics after snapshot so equity curve includes today
+    renderAnalytics(computeTotals());
     updateUnderlyingPrices();
     autosave();
   }
@@ -651,8 +1411,14 @@
     document.querySelectorAll('.mark-cell').forEach(el => {
       el.addEventListener('click', () => beginMarkEdit(el));
     });
+    document.querySelectorAll('.note-cell').forEach(el => {
+      el.addEventListener('click', () => beginNoteEdit(el));
+    });
     document.querySelectorAll('.close-btn').forEach(el => {
       el.addEventListener('click', () => beginClose(el));
+    });
+    document.querySelectorAll('.roll-btn').forEach(el => {
+      el.addEventListener('click', () => beginRoll(el));
     });
     document.querySelectorAll('.del-btn').forEach(el => {
       el.addEventListener('click', () => {
@@ -709,6 +1475,27 @@
     input.addEventListener('blur', commit);
   }
 
+  function beginNoteEdit(el){
+    const list = listFor(el.dataset.list);
+    const id = parseInt(el.dataset.id);
+    const pos = list.find(p => p.id === id);
+    if (!pos) return;
+    const input = document.createElement('input');
+    input.className = 'note-input';
+    input.type = 'text';
+    input.value = pos.note || '';
+    input.placeholder = 'note…';
+    el.replaceWith(input);
+    input.focus();
+    input.select();
+    const commit = () => {
+      pos.note = input.value.trim();
+      renderAll();
+    };
+    input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
+    input.addEventListener('blur', commit);
+  }
+
   function beginClose(el){
     const id = parseInt(el.dataset.id);
     const listName = el.dataset.list;
@@ -746,14 +1533,62 @@
     renderAll();
   }
 
-  // ---- Assignment: realize intrinsic value of the option leg at assignment.
-  // The option leg itself settles at 0 (premium kept). The share leg is booked
-  // at intrinsic value so the price difference between strike and market shows
-  // up as realized P&L on the trade.
-  //
-  // Examples:
-  //   CSP $22 assigned when stock is $25 -> share leg realizes +$3/share.
-  //   CSP $22 assigned when stock is $20 -> share leg realizes -$2/share.
+  // ---- Roll: close current position and open a new one with new strike/expiry.
+  // Records both legs as one "rolled" pair so the P&L is visible, and the new
+  // position's entry is adjusted to reflect the net credit/debit so annualized
+  // return and P&L aren't distorted by the roll.
+  function beginRoll(el){
+    const id = parseInt(el.dataset.id);
+    const listName = el.dataset.list;
+    const pos = listFor(listName).find(p => p.id === id);
+    if (!pos) return;
+    const isLong = listName === 'long-body';
+    const isCsp = listName === 'csp-body';
+    const isCc = listName === 'cc-body';
+    const side = isLong ? 'long' : 'short';
+
+    const curMark = pos.mark;
+    const defaultNewStrike = isCsp ? pos.strike * 0.95 : (isCc ? pos.strike * 1.05 : pos.strike);
+    const defaultNewExpiry = new Date(Date.now() + 45*24*3600*1000).toISOString().slice(0,10);
+
+    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\n\nNew strike:`, defaultNewStrike.toFixed(2));
+    if (q === null) return;
+    const newStrike = parseFloat(q);
+    if (isNaN(newStrike) || newStrike <= 0) { alert('Invalid strike.'); return; }
+
+    const e = prompt(`New expiry (YYYY-MM-DD):`, defaultNewExpiry);
+    if (e === null) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e)) { alert('Invalid date.'); return; }
+
+    const p = prompt(`New premium ${isLong ? 'paid' : 'received'}:`, pos.entry.toFixed(2));
+    if (p === null) return;
+    const newEntry = parseFloat(p);
+    if (isNaN(newEntry) || newEntry < 0) { alert('Invalid premium.'); return; }
+
+    // Realize the current leg
+    const closeExit = curMark;
+    recentTrades.push({
+      ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
+      strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
+      entry: pos.entry, exit: closeExit,
+      closedOn: new Date().toISOString().slice(0,10),
+      status: 'closed', kind: kindFor(listName), rolled: true
+    });
+
+    // Remove old, add new
+    const list = listFor(listName).filter(x => x.id !== id);
+    setListFor(listName, list);
+    const newPos = {
+      id: nextId++, ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
+      strike: newStrike, expiry: e, qty: pos.qty, entry: newEntry, mark: newEntry,
+      note: pos.note ? `rolled from $${pos.strike} ${pos.expiry}` : ''
+    };
+    list.push(newPos);
+    setListFor(listName, list);
+
+    renderAll();
+  }
+
   function beginAssign(el){
     const id = parseInt(el.dataset.id);
     const pos = csps.find(p => p.id === id);
@@ -769,43 +1604,21 @@
 
     if (!confirm(`Assign ${pos.ticker} $${pos.strike} put?\n\nBuys ${shares} shares at $${pos.strike}. ${sourceNote}\n\nShare-side P&L booked at assignment: ${formatMoney(shareIntrinsic)}`)) return;
 
-    // 1) Option leg: exit at 0 (premium kept), status 'assigned'
     closePosition('csp-body', id, 0, 'assigned');
 
-    // 2) Share leg: realize intrinsic value at settlement
     if (Math.abs(shareIntrinsic) >= 0.005){
       recentTrades.push({
-        ticker: pos.ticker,
-        type: 'Shares',
-        strike: 0,
-        expiry: pos.expiry,
-        qty: pos.qty,
-        entry: pos.strike,
-        exit: settlement,
+        ticker: pos.ticker, type: 'Shares', strike: 0, expiry: pos.expiry, qty: pos.qty,
+        entry: pos.strike, exit: settlement,
         closedOn: new Date().toISOString().slice(0,10),
-        status: 'assigned',
-        kind: 'assign_shares',
-        pnl: shareIntrinsic
+        status: 'assigned', kind: 'assign_shares', pnl: shareIntrinsic
       });
     }
 
-    // 3) Create share lot at settlement basis (so the gain isn't double-counted)
-    shareLots.push({
-      id: nextId++,
-      ticker: pos.ticker,
-      shares,
-      basis: settlement,
-      source: 'assigned'
-    });
-
+    shareLots.push({ id: nextId++, ticker: pos.ticker, shares, basis: settlement, source: 'assigned' });
     renderAll();
   }
 
-  // ---- Called away: realize the difference between strike and weighted basis
-  // of the share lots being called away, plus the option leg premium.
-  //
-  // Example:
-  //   CC $30 called away on shares with basis $22 -> share leg realizes +$8/share.
   function beginCalledAway(el){
     const id = parseInt(el.dataset.id);
     const pos = ccs.find(p => p.id === id);
@@ -819,7 +1632,6 @@
       if (!confirm(`${pos.ticker}: you hold ${totalSharesHeld} shares but need ${sharesNeeded} to cover this call.\n\nProceed anyway? The shortfall will be ignored (no share-side P&L booked for missing shares).`)) return;
     }
 
-    // Compute weighted average basis of the lots being consumed
     let remaining = Math.min(sharesNeeded, totalSharesHeld);
     let basisWeighted = 0;
     let sharesConsumed = 0;
@@ -836,27 +1648,17 @@
 
     if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away?\n\nSells ${sharesConsumed} shares at $${pos.strike} (avg basis $${avgBasis.toFixed(2)}).\nShare-side P&L booked at call-away: ${formatMoney(shareGain)}`)) return;
 
-    // 1) Option leg: exit at 0 (premium kept), status 'called_away'
     closePosition('cc-body', id, 0, 'called_away');
 
-    // 2) Share leg: realize (strike - basis) * sharesConsumed
     if (Math.abs(shareGain) >= 0.005){
       recentTrades.push({
-        ticker: pos.ticker,
-        type: 'Shares',
-        strike: 0,
-        expiry: pos.expiry,
-        qty: sharesConsumed / 100,
-        entry: avgBasis,
-        exit: pos.strike,
+        ticker: pos.ticker, type: 'Shares', strike: 0, expiry: pos.expiry, qty: sharesConsumed / 100,
+        entry: avgBasis, exit: pos.strike,
         closedOn: new Date().toISOString().slice(0,10),
-        status: 'called_away',
-        kind: 'called_shares',
-        pnl: shareGain
+        status: 'called_away', kind: 'called_shares', pnl: shareGain
       });
     }
 
-    // 3) Reduce share lots
     let toRemove = sharesConsumed;
     shareLots = shareLots.map(l => {
       if (l.ticker !== pos.ticker || toRemove <= 0) return l;
@@ -869,7 +1671,7 @@
   }
 
   // ================= ADD FORMS =================
-  function wireAddForm(toggleId, panelId, confirmId, errorId, fieldIds, build, targetList, setTarget){
+  function wireAddForm(toggleId, panelId, confirmId, errorId, fieldIds, build){
     const panel = document.getElementById(panelId);
     document.getElementById(toggleId).addEventListener('click', () => panel.classList.toggle('open'));
     document.getElementById(confirmId).addEventListener('click', () => {
@@ -886,7 +1688,7 @@
       const errEl = document.getElementById(errorId);
       if (!ok){ errEl.style.display = 'block'; return; }
       errEl.style.display = 'none';
-      const arr = build(vals);
+      build(vals);
       fieldIds.forEach(([,id,kind]) => { const f = document.getElementById(id); if (f.tagName==='INPUT' && kind !== 'date') f.value=''; });
       panel.classList.remove('open');
       renderAll();
@@ -896,17 +1698,17 @@
   wireAddForm('long-add-toggle','long-add-panel','long-add-confirm','long-add-error',
     [['ticker','long-ticker','text'],['type','long-type','select'],['strike','long-strike','num'],
      ['expiry','long-expiry','date'],['qty','long-qty','qty'],['entry','long-entry','num']],
-    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry }); });
+    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'' }); });
 
   wireAddForm('csp-add-toggle','csp-add-panel','csp-add-confirm','csp-add-error',
     [['ticker','csp-ticker','text'],['strike','csp-strike','num'],
      ['expiry','csp-expiry','date'],['qty','csp-qty','qty'],['entry','csp-entry','num']],
-    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry }); });
+    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'' }); });
 
   wireAddForm('cc-add-toggle','cc-add-panel','cc-add-confirm','cc-add-error',
     [['ticker','cc-ticker','text'],['strike','cc-strike','num'],
      ['expiry','cc-expiry','date'],['qty','cc-qty','qty'],['entry','cc-entry','num']],
-    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry }); });
+    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'' }); });
 
   wireAddForm('lot-add-toggle','lot-add-panel','lot-add-confirm','lot-add-error',
     [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
@@ -935,11 +1737,7 @@
       const data = await resp.json();
       if (data['error']){ rateLimited = true; return { error:'rate-limit' }; }
       if (data['c'] === null || data['c'] === 0) return { error:'invalid-symbol' };
-      return {
-        price: data['c'],
-        change: data['d'],
-        changePct: data['dp']
-      };
+      return { price: data['c'], change: data['d'], changePct: data['dp'] };
     } catch(err){ return { error:'network' }; }
   }
 
@@ -1011,18 +1809,55 @@
     }
     btn.disabled = false;
     isUpdating = false;
-    renderLedgers(); // share-lot P&L depends on quotes
-    renderLots();    // show mkt price next to each lot
+
+    // quotes affect share-lot P&L and analytics
+    const T = renderLedgers();
+    renderLots();
+    renderAnalytics(T);
+    snapshotEquity(T.accountValue);
+    autosave();
   }
 
   document.getElementById('refresh-quotes').addEventListener('click', () => updateUnderlyingPrices({ force:true }));
 
-  // ================= SAVE / LOAD (file-based, since artifacts can't use browser storage) =================
+  // ================= ANALYTICS TOGGLE =================
+  document.getElementById('analytics-toggle').addEventListener('click', (e) => {
+    const body = document.getElementById('analytics-body');
+    body.classList.toggle('open');
+    e.target.textContent = body.classList.contains('open') ? 'hide charts' : 'show charts';
+    if (body.classList.contains('open')) renderAnalytics(computeTotals());
+  });
+
+  // ================= CSV EXPORT =================
+  document.getElementById('csv-btn').addEventListener('click', () => {
+    const rows = [['ticker','strategy','type','strike','expiry','qty','entry','exit','closedOn','status','pnl']];
+    recentTrades.forEach(t => {
+      rows.push([
+        t.ticker, kindLabel(t.kind), t.type||'', t.strike||'', t.expiry||'', t.qty,
+        t.entry.toFixed(2), t.exit.toFixed(2), t.closedOn, t.status, tradePnl(t).toFixed(2)
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => {
+      const s = String(c);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `options-journal-trades-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // ================= SAVE / LOAD =================
   function collectState(){
     return {
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
-      startingBalance, longs, csps, ccs, shareLots, dividends, recentTrades, nextId
+      startingBalance, longs, csps, ccs, shareLots, dividends, recentTrades, nextId, equityHistory
     };
   }
 
@@ -1035,6 +1870,7 @@
     shareLots = Array.isArray(data.shareLots) ? data.shareLots : [];
     dividends = Array.isArray(data.dividends) ? data.dividends : [];
     recentTrades = Array.isArray(data.recentTrades) ? data.recentTrades : [];
+    equityHistory = Array.isArray(data.equityHistory) ? data.equityHistory : [];
     nextId = typeof data.nextId === 'number' ? data.nextId : nextId;
     quoteCache.clear();
     renderAll();
@@ -1044,9 +1880,8 @@
     const blob = new Blob([JSON.stringify(collectState(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0,10);
     a.href = url;
-    a.download = `options-journal-${stamp}.json`;
+    a.download = `options-journal-${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1060,14 +1895,21 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      try{
-        applyState(JSON.parse(reader.result));
-      } catch(e){
-        alert('Couldn\'t read that file — is it a JSON file saved from this journal?');
-      }
+      try{ applyState(JSON.parse(reader.result)); }
+      catch(e){ alert('Couldn\'t read that file — is it a JSON file saved from this journal?'); }
     };
     reader.readAsText(file);
     loadInput.value = '';
+  });
+
+  // re-render charts on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (document.getElementById('analytics-body').classList.contains('open'))
+        renderAnalytics(computeTotals());
+    }, 150);
   });
 
   // ================= INIT =================
@@ -1076,7 +1918,7 @@
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) { applyState(JSON.parse(raw)); return; }
-    } catch(e){ /* storage blocked (e.g. inside Claude's artifact preview) — fall back to seed data */ }
+    } catch(e){ /* storage blocked */ }
     renderAll();
   })();
 </script>
