@@ -888,14 +888,15 @@
     if (equityHistory.length >= 2){
       pts = equityHistory.map(h => ({ date:h.date, v:h.accountValue }));
     } else {
-      // build step curve from realized events by date
+      // build step curve from realized events, merged and sorted by date (trades + dividends together,
+      // not trades-then-dividends, or events out of chronological order distort the shape of the curve)
       const events = [];
       events.push({ date:'1970-01-01', v:0 });
       let running = 0;
-      const sorted = recentTrades.slice().sort((a,b) => a.closedOn.localeCompare(b.closedOn));
-      sorted.forEach(t => { running += tradePnl(t); events.push({ date:t.closedOn, v:running }); });
-      // dividends
-      dividends.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(d => { running += d.amount; events.push({ date:d.date, v:running }); });
+      const tradeEvents = recentTrades.map(t => ({ date:t.closedOn, v:tradePnl(t) }));
+      const divEvents = dividends.map(d => ({ date:d.date, v:d.amount }));
+      const merged = [...tradeEvents, ...divEvents].sort((a,b) => a.date.localeCompare(b.date));
+      merged.forEach(e => { running += e.v; events.push({ date:e.date, v:running }); });
       pts = events.map(e => ({ date:e.date, v:startingBalance + e.v }));
       if (pts.length < 2) pts = [{date:'start', v:startingBalance}, {date:'now', v:startingBalance}];
     }
@@ -1291,7 +1292,8 @@
     const map = new Map();
     longs.forEach(p => map.set(p.ticker, (map.get(p.ticker)||0) + p.entry*p.qty*100));
     csps.forEach(p => map.set(p.ticker, (map.get(p.ticker)||0) + p.strike*p.qty*100));
-    ccs.forEach(p => map.set(p.ticker, (map.get(p.ticker)||0) + p.strike*p.qty*100));
+    // covered calls are backed by shares already counted via shareLots below — don't add their
+    // strike value again, or it double-counts capital for any ticker with an open CC
     shareLots.forEach(l => map.set(l.ticker, (map.get(l.ticker)||0) + l.basis*l.shares));
     const entries = [...map.entries()].sort((a,b)=>b[1]-a[1]);
     if (entries.length === 0){
@@ -1316,7 +1318,8 @@
     const get = t => { if (!map.has(t)) map.set(t, { ticker:t, contracts:0, shares:0, premium:0, realized:0, unrealized:0, capital:0 }); return map.get(t); };
     longs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium -= p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'long'); m.capital += p.entry*p.qty*100; });
     csps.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; });
-    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; });
+    // capital isn't added for ccs here — the shares backing them are already counted below
+    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); });
     shareLots.forEach(l => { const m=get(l.ticker); m.shares += l.shares; m.capital += l.basis*l.shares; const q=getQuotePrice(l.ticker); if (q!=null) m.unrealized += (q-l.basis)*l.shares; });
     recentTrades.forEach(t => { const m=get(t.ticker); m.realized += tradePnl(t); });
 
@@ -1581,7 +1584,7 @@
     const newPos = {
       id: nextId++, ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: newStrike, expiry: e, qty: pos.qty, entry: newEntry, mark: newEntry,
-      note: pos.note ? `rolled from $${pos.strike} ${pos.expiry}` : ''
+      note: pos.note ? `${pos.note} (rolled from $${pos.strike} ${pos.expiry})` : `rolled from $${pos.strike} ${pos.expiry}`
     };
     list.push(newPos);
     setListFor(listName, list);
