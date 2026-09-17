@@ -497,13 +497,14 @@
   // ================= STATE =================
   let startingBalance = 20000;
 
-  let longs = [
-    { id:1, ticker:'GLXY', type:'Call', strike:20, expiry:'2026-10-16', qty:4, entry:0.50, mark:0.50, note:'' },
-    { id:2, ticker:'RKLB', type:'Call', strike:55, expiry:'2026-10-16', qty:1, entry:1.80, mark:1.80, note:'' },
-    { id:3, ticker:'SOFI', type:'Call', strike:16, expiry:'2026-10-16', qty:5, entry:0.34, mark:0.34, note:'' },
-    { id:4, ticker:'GLXY', type:'Call', strike:22, expiry:'2026-09-18', qty:3, entry:0.40, mark:0.40, note:'' }
+  let longs = [];
+  let csps = [
+    { id:1, ticker:'GLXY', type:'Put', strike:20, expiry:'2026-10-16', qty:4, entry:0.50, mark:0.50, note:'', opened:'2026-09-04' },
+    { id:2, ticker:'RKLB', type:'Put', strike:55, expiry:'2026-10-16', qty:1, entry:1.80, mark:1.80, note:'', opened:'2026-09-04' },
+    { id:3, ticker:'SOFI', type:'Put', strike:16, expiry:'2026-10-16', qty:5, entry:0.34, mark:0.34, note:'', opened:'2026-09-04' },
+    { id:4, ticker:'GLXY', type:'Put', strike:22, expiry:'2026-09-18', qty:3, entry:0.40, mark:0.40, note:'', opened:'2026-09-15' },
+    { id:5, ticker:'SOFI', type:'Put', strike:16, expiry:'2026-09-25', qty:5, entry:0.25, mark:0.25, note:'', opened:'2026-09-16' }
   ];
-  let csps = [];
   let ccs = [];
   let shareLots = [];
   let dividends = [];
@@ -549,6 +550,16 @@
     const d = new Date(dateStr + 'T00:00:00');
     return Math.ceil((d - new Date()) / (1000*60*60*24));
   }
+  function daysSince(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return Math.floor((new Date() - d) / (1000*60*60*24));
+  }
+  function totalDuration(pos){
+    if (!pos.opened) return null;
+    const o = new Date(pos.opened + 'T00:00:00');
+    const e = new Date(pos.expiry + 'T00:00:00');
+    return Math.round((e - o) / (1000*60*60*24));
+  }
   function statusRow(status){
     const label = status.replace('_',' ');
     return `<span class="status-row st-${status}"><span class="status-dot">●</span>${label}</span>`;
@@ -566,10 +577,26 @@
     if (dte <= 0) return null;
     const capital = side === 'long' ? pos.entry * pos.qty * 100 : pos.strike * pos.qty * 100;
     if (capital <= 0) return null;
+
+    if (side === 'short'){
+      // CSPs/CCs: the premium is collected up front regardless of where the underlying moves
+      // afterward, so "Ann. return" here is the annualized yield you're locked into if it expires
+      // worthless — premium over capital, stretched over the position's full planned duration.
+      // That keeps the number stable for the life of the trade instead of ballooning as expiration
+      // gets close (dividing by shrinking remaining DTE) or swinging with day-to-day mark noise.
+      const total = totalDuration(pos) || dte; // fall back for older saved positions with no 'opened' date
+      const periodReturn = pos.entry / pos.strike; // qty cancels out of premium/capital, so this ratio alone is equivalent
+      const annualized = periodReturn * (365 / total);
+      return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital, totalDuration: total };
+    }
+
+    // Long options: there's no premium locked in up front, so annualize the actual unrealized
+    // gain/loss using days actually held rather than a fixed planned duration.
     const pnl = calcPnl(pos.entry, pos.mark, pos.qty, side);
     const periodReturn = pnl / capital;
-    const annualized = periodReturn * (365 / dte);
-    return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital };
+    const daysHeld = pos.opened ? Math.max(1, daysSince(pos.opened)) : dte;
+    const annualized = periodReturn * (365 / daysHeld);
+    return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital, daysHeld };
   }
 
   function annReturnCell(pos, side){
@@ -1584,7 +1611,8 @@
     const newPos = {
       id: nextId++, ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: newStrike, expiry: e, qty: pos.qty, entry: newEntry, mark: newEntry,
-      note: pos.note ? `${pos.note} (rolled from $${pos.strike} ${pos.expiry})` : `rolled from $${pos.strike} ${pos.expiry}`
+      note: pos.note ? `${pos.note} (rolled from $${pos.strike} ${pos.expiry})` : `rolled from $${pos.strike} ${pos.expiry}`,
+      opened: new Date().toISOString().slice(0,10)
     };
     list.push(newPos);
     setListFor(listName, list);
@@ -1701,17 +1729,17 @@
   wireAddForm('long-add-toggle','long-add-panel','long-add-confirm','long-add-error',
     [['ticker','long-ticker','text'],['type','long-type','select'],['strike','long-strike','num'],
      ['expiry','long-expiry','date'],['qty','long-qty','qty'],['entry','long-entry','num']],
-    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'' }); });
+    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened: new Date().toISOString().slice(0,10) }); });
 
   wireAddForm('csp-add-toggle','csp-add-panel','csp-add-confirm','csp-add-error',
     [['ticker','csp-ticker','text'],['strike','csp-strike','num'],
      ['expiry','csp-expiry','date'],['qty','csp-qty','qty'],['entry','csp-entry','num']],
-    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'' }); });
+    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened: new Date().toISOString().slice(0,10) }); });
 
   wireAddForm('cc-add-toggle','cc-add-panel','cc-add-confirm','cc-add-error',
     [['ticker','cc-ticker','text'],['strike','cc-strike','num'],
      ['expiry','cc-expiry','date'],['qty','cc-qty','qty'],['entry','cc-entry','num']],
-    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'' }); });
+    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened: new Date().toISOString().slice(0,10) }); });
 
   wireAddForm('lot-add-toggle','lot-add-panel','lot-add-confirm','lot-add-error',
     [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
