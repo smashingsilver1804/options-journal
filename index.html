@@ -107,6 +107,7 @@
   .add-panel.open{display:block;}
   .add-grid{display:grid;grid-template-columns:repeat(6,1fr) auto;gap:10px;align-items:end;}
   .add-grid.lots{grid-template-columns:repeat(3,1fr) auto;}
+  .add-grid.seven{grid-template-columns:repeat(7,1fr) auto;}
   .field label{display:block;font-size:10.5px;color:var(--silver-faint);margin-bottom:5px;}
   .field select,.field input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:12.5px;padding:7px 8px;border-radius:2px;}
   .field select:focus,.field input:focus{outline:none;border-color:var(--silver-dim);}
@@ -166,7 +167,7 @@
   @media (max-width:720px){
     .ledger{flex-wrap:wrap;}
     .ledger-item{flex:1 1 50%;border-bottom:1px solid var(--line);}
-    .add-grid,.add-grid.lots{grid-template-columns:1fr 1fr;}
+    .add-grid,.add-grid.lots,.add-grid.seven{grid-template-columns:1fr 1fr;}
     table,thead,tbody,tr{display:block;}
     thead{display:none;}
     tbody tr{border-bottom:1px solid var(--line);padding:10px 0;}
@@ -378,16 +379,17 @@
   </div>
   <div class="add-toggle"><button class="btn" id="long-add-toggle">+ add long position</button></div>
   <div class="add-panel" id="long-add-panel">
-    <div class="add-grid">
+    <div class="add-grid seven">
       <div class="field"><label>Ticker</label><input id="long-ticker" placeholder="AAPL" maxlength="8"></div>
       <div class="field"><label>Type</label><select id="long-type"><option>Call</option><option>Put</option></select></div>
       <div class="field"><label>Strike</label><input id="long-strike" type="number" step="0.5" placeholder="150"></div>
+      <div class="field"><label>Opened</label><input id="long-opened" type="date"></div>
       <div class="field"><label>Expiry</label><input id="long-expiry" type="date"></div>
       <div class="field"><label>Qty</label><input id="long-qty" type="number" step="1" placeholder="1"></div>
       <div class="field"><label>Entry premium</label><input id="long-entry" type="number" step="0.01" placeholder="1.20"></div>
       <div class="field"><button class="btn primary" id="long-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
     </div>
-    <div class="add-error" id="long-add-error">Fill in ticker, strike, expiry, qty and entry.</div>
+    <div class="add-error" id="long-add-error">Fill in ticker, strike, opened, expiry, qty and entry.</div>
   </div>
 
   <!-- ============ CASH-SECURED PUTS ============ -->
@@ -410,13 +412,13 @@
     <div class="add-grid">
       <div class="field"><label>Ticker</label><input id="csp-ticker" placeholder="AAPL" maxlength="8"></div>
       <div class="field"><label>Strike</label><input id="csp-strike" type="number" step="0.5" placeholder="95"></div>
+      <div class="field"><label>Opened</label><input id="csp-opened" type="date"></div>
       <div class="field"><label>Expiry</label><input id="csp-expiry" type="date"></div>
       <div class="field"><label>Qty (contracts)</label><input id="csp-qty" type="number" step="1" placeholder="1"></div>
       <div class="field"><label>Premium received</label><input id="csp-entry" type="number" step="0.01" placeholder="1.10"></div>
-      <div class="field"></div>
       <div class="field"><button class="btn primary" id="csp-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
     </div>
-    <div class="add-error" id="csp-add-error">Fill in ticker, strike, expiry, qty and premium.</div>
+    <div class="add-error" id="csp-add-error">Fill in ticker, strike, opened, expiry, qty and premium.</div>
   </div>
 
   <!-- ============ COVERED CALLS ============ -->
@@ -451,13 +453,13 @@
     <div class="add-grid">
       <div class="field"><label>Ticker</label><input id="cc-ticker" placeholder="AAPL" maxlength="8"></div>
       <div class="field"><label>Strike</label><input id="cc-strike" type="number" step="0.5" placeholder="105"></div>
+      <div class="field"><label>Opened</label><input id="cc-opened" type="date"></div>
       <div class="field"><label>Expiry</label><input id="cc-expiry" type="date"></div>
       <div class="field"><label>Qty (contracts)</label><input id="cc-qty" type="number" step="1" placeholder="1"></div>
       <div class="field"><label>Premium received</label><input id="cc-entry" type="number" step="0.01" placeholder="0.85"></div>
-      <div class="field"></div>
       <div class="field"><button class="btn primary" id="cc-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
     </div>
-    <div class="add-error" id="cc-add-error">Fill in ticker, strike, expiry, qty and premium.</div>
+    <div class="add-error" id="cc-add-error">Fill in ticker, strike, opened, expiry, qty and premium.</div>
   </div>
 
   <!-- ============ RECENT ACTIVITY ============ -->
@@ -550,10 +552,6 @@
     const d = new Date(dateStr + 'T00:00:00');
     return Math.ceil((d - new Date()) / (1000*60*60*24));
   }
-  function daysSince(dateStr){
-    const d = new Date(dateStr + 'T00:00:00');
-    return Math.floor((new Date() - d) / (1000*60*60*24));
-  }
   function totalDuration(pos){
     if (!pos.opened) return null;
     const o = new Date(pos.opened + 'T00:00:00');
@@ -578,25 +576,23 @@
     const capital = side === 'long' ? pos.entry * pos.qty * 100 : pos.strike * pos.qty * 100;
     if (capital <= 0) return null;
 
+    // Annualize over the position's actual planned duration — its start date to its expiry —
+    // not days left to expiry (balloons as expiration nears) and not days elapsed since today
+    // (drifts day to day on its own). Falls back to the remaining DTE for older saved positions
+    // that predate the 'opened' field.
+    const total = totalDuration(pos) || dte;
+
+    let periodReturn;
     if (side === 'short'){
       // CSPs/CCs: the premium is collected up front regardless of where the underlying moves
-      // afterward, so "Ann. return" here is the annualized yield you're locked into if it expires
-      // worthless — premium over capital, stretched over the position's full planned duration.
-      // That keeps the number stable for the life of the trade instead of ballooning as expiration
-      // gets close (dividing by shrinking remaining DTE) or swinging with day-to-day mark noise.
-      const total = totalDuration(pos) || dte; // fall back for older saved positions with no 'opened' date
-      const periodReturn = pos.entry / pos.strike; // qty cancels out of premium/capital, so this ratio alone is equivalent
-      const annualized = periodReturn * (365 / total);
-      return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital, totalDuration: total };
+      // afterward, so this is the yield you're locked into if it expires worthless.
+      periodReturn = pos.entry / pos.strike; // qty cancels out of premium/capital, so this ratio alone is equivalent
+    } else {
+      // Longs: there's no premium locked in up front, so use the actual unrealized gain/loss.
+      periodReturn = calcPnl(pos.entry, pos.mark, pos.qty, side) / capital;
     }
-
-    // Long options: there's no premium locked in up front, so annualize the actual unrealized
-    // gain/loss using days actually held rather than a fixed planned duration.
-    const pnl = calcPnl(pos.entry, pos.mark, pos.qty, side);
-    const periodReturn = pnl / capital;
-    const daysHeld = pos.opened ? Math.max(1, daysSince(pos.opened)) : dte;
-    const annualized = periodReturn * (365 / daysHeld);
-    return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital, daysHeld };
+    const annualized = periodReturn * (365 / total);
+    return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital, totalDuration: total };
   }
 
   function annReturnCell(pos, side){
@@ -1726,20 +1722,23 @@
     });
   }
 
+  document.getElementById('long-opened').value = new Date().toISOString().slice(0,10);
   wireAddForm('long-add-toggle','long-add-panel','long-add-confirm','long-add-error',
     [['ticker','long-ticker','text'],['type','long-type','select'],['strike','long-strike','num'],
-     ['expiry','long-expiry','date'],['qty','long-qty','qty'],['entry','long-entry','num']],
-    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened: new Date().toISOString().slice(0,10) }); });
+     ['opened','long-opened','date'],['expiry','long-expiry','date'],['qty','long-qty','qty'],['entry','long-entry','num']],
+    v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened:v.opened }); });
 
+  document.getElementById('csp-opened').value = new Date().toISOString().slice(0,10);
   wireAddForm('csp-add-toggle','csp-add-panel','csp-add-confirm','csp-add-error',
     [['ticker','csp-ticker','text'],['strike','csp-strike','num'],
-     ['expiry','csp-expiry','date'],['qty','csp-qty','qty'],['entry','csp-entry','num']],
-    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened: new Date().toISOString().slice(0,10) }); });
+     ['opened','csp-opened','date'],['expiry','csp-expiry','date'],['qty','csp-qty','qty'],['entry','csp-entry','num']],
+    v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened:v.opened }); });
 
+  document.getElementById('cc-opened').value = new Date().toISOString().slice(0,10);
   wireAddForm('cc-add-toggle','cc-add-panel','cc-add-confirm','cc-add-error',
     [['ticker','cc-ticker','text'],['strike','cc-strike','num'],
-     ['expiry','cc-expiry','date'],['qty','cc-qty','qty'],['entry','cc-entry','num']],
-    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened: new Date().toISOString().slice(0,10) }); });
+     ['opened','cc-opened','date'],['expiry','cc-expiry','date'],['qty','cc-qty','qty'],['entry','cc-entry','num']],
+    v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened:v.opened }); });
 
   wireAddForm('lot-add-toggle','lot-add-panel','lot-add-confirm','lot-add-error',
     [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
