@@ -187,7 +187,7 @@
   <div class="header-row">
     <div>
       <h1>Options Journal</h1>
-      <div class="sub-line">Underlying quotes via Finnhub · synced to JSONBin · $0.65/contract commission</div>
+      <div class="sub-line">Underlying quotes via Finnhub · synced to JSONBin · $0.65/contract on open &amp; close only</div>
     </div>
     <div class="header-right">
       <span class="pos-count" id="pos-count">0</span> open across all strategies
@@ -229,7 +229,7 @@
     <div class="ledger-item">
       <div class="label">Net P&L</div>
       <div class="value" id="net-pnl">—</div>
-      <div class="sub">realized + unrealized, net of fees</div>
+      <div class="sub">realized + unrealized, net of fees paid</div>
     </div>
     <div class="ledger-item">
       <div class="label">Capital deployed</div>
@@ -265,7 +265,7 @@
     <div class="stat-item"><div class="label">Avg loss</div><div class="value" id="perf-avgloss">—</div></div>
     <div class="stat-item"><div class="label">Profit factor</div><div class="value" id="perf-pf">—</div></div>
     <div class="stat-item"><div class="label">Expectancy / trade</div><div class="value" id="perf-exp">—</div></div>
-    <div class="stat-item"><div class="label">Commissions paid</div><div class="value dim" id="perf-comm">—</div></div>
+    <div class="stat-item"><div class="label">Fees paid</div><div class="value dim" id="perf-comm">—</div></div>
   </div>
 
   <!-- ============ WATCHLIST ============ -->
@@ -513,7 +513,7 @@
     <button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes">↻ refresh quotes</button>
   </div>
   <div class="foot-note" style="border-top:none;padding-top:0;">
-    <span class="note">Journal autosaves to JSONBin and syncs across devices. All P&amp;L figures are net of $0.65/contract commissions. <b>save</b>/<b>load</b>/<b>csv</b> work as manual backups.</span>
+    <span class="note">Journal autosaves to JSONBin and syncs across devices. Fees are $0.65/contract on each leg actually traded — open, and close if you buy/sell to close. Expired and assigned legs pay nothing on the close side. <b>save</b>/<b>load</b>/<b>csv</b> work as manual backups.</span>
   </div>
 
 </div>
@@ -527,14 +527,15 @@
   const CALL_GAP_MS  = 100;
   const STORAGE_KEY  = 'options-journal-state-v1';
 
-  // Per-contract commission, charged on every leg (open and close).
-  // Change this one number if your broker's rate changes.
+  // Per-contract commission. Charged once when you open a leg, and again only
+  // if you actively close it (buy/sell to close). Expired, assigned, and
+  // called-away legs pay nothing on the close side.
   const COMMISSION_PER_CONTRACT = 0.65;
 
   // ================= CLOUD SYNC (JSONBin) =================
   const JSONBIN_BIN = '6aaea740ffd5d1605319af49';
   const JSONBIN_ACCOUNT = '6aae98d97e19fe510f392f62';
-  const JSONBIN_KEY = '$2a$10$MA.Ilz/380lSQpX2LMOhfegneu335XwOgNSHQCxc2apJJ.g1Lxm9a';
+  const JSONBIN_KEY = 'PASTE_YOUR_MASTER_KEY_HERE';
 
   const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN}`;
 
@@ -553,7 +554,7 @@
   let shareLots = [];
   let dividends = [];
   let recentTrades = [];
-  let watchlist = []; // { id, ticker, note, target, added }
+  let watchlist = [];
   let nextId = 100;
 
   let equityHistory = [];
@@ -568,30 +569,33 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ----- COMMISSIONS -----
-  // Every option trade pays COMMISSION_PER_CONTRACT per contract on open, and again on close.
-  // Share trades (assign_shares / called_shares) don't pay this fee in our model.
-  function legCommission(qty){
+  // One leg = one commission charge. Open leg is always charged. Close leg is
+  // charged only if the trade is actively closed (not expired / assigned / called away).
+  function legFee(qty){
     return qty * COMMISSION_PER_CONTRACT;
   }
-  function roundTripCommission(qty){
-    return legCommission(qty) * 2;
+  function feeForClose(status){
+    // No fee on the close side for anything that wasn't a buy/sell-to-close.
+    if (status === 'expired' || status === 'assigned' || status === 'called_away') return 0;
+    return 1; // multiplier — caller multiplies by legFee(qty)
   }
 
   // Gross option P&L (pre-commission) for a single leg pair
   const grossOptionPnl = (entry, markOrExit, qty, side) =>
     side === 'short' ? (entry - markOrExit) * qty * 100 : (markOrExit - entry) * qty * 100;
 
-  // Net option P&L = gross minus open + close commission
-  const netOptionPnl = (entry, markOrExit, qty, side) =>
-    grossOptionPnl(entry, markOrExit, qty, side) - roundTripCommission(qty);
-
-  // For OPEN positions, only the OPEN commission has actually been paid.
-  // The close commission is a known future cost we accrue now so "net" is honest.
-  // (This matches how most brokers show open-position P&L if you include the exit fee.)
+  // Open-position P&L: only the open leg's commission has actually been paid.
+  // If it later expires worthless, no close fee applies; if you buy to close,
+  // the close fee appears when you record the close.
   const netOpenPnl = (entry, mark, qty, side) =>
-    grossOptionPnl(entry, mark, qty, side) - roundTripCommission(qty);
+    grossOptionPnl(entry, mark, qty, side) - legFee(qty);
 
-  const calcPnl = netOpenPnl; // kept for any legacy call sites
+  const calcPnl = netOpenPnl; // legacy alias
+
+  // Closed-trade P&L. status drives whether the close leg was charged.
+  function netClosedPnl(entry, exit, qty, side, status){
+    return grossOptionPnl(entry, exit, qty, side) - legFee(qty) - feeForClose(status) * legFee(qty);
+  }
 
   function formatMoney(val){
     if (Math.abs(val) < 0.005) return '$0.00';
@@ -645,8 +649,8 @@
     const total = totalDuration(pos) || dte;
     let periodReturn;
     if (side === 'short'){
-      // Premium net of round-trip commission, as a fraction of strike-collateral
-      const netPremium = pos.entry * pos.qty * 100 - roundTripCommission(pos.qty);
+      // Net premium after open-leg fee only — that's what you net if it expires
+      const netPremium = pos.entry * pos.qty * 100 - legFee(pos.qty);
       periodReturn = netPremium / capital;
     } else {
       periodReturn = netOpenPnl(pos.entry, pos.mark, pos.qty, side) / capital;
@@ -663,17 +667,27 @@
     return `<span class="ann-ret ${cls}">${sign}${r.pct.toFixed(1)}%</span>`;
   }
 
-  // Closed-trade P&L. Options get round-trip commission; shares don't.
+  // Closed-trade P&L — reads t.status to decide whether to charge the close leg.
   function tradePnl(t){
-    if (typeof t.pnl === 'number'){
-      // Manually-stored P&L (share-side legs) — already net of anything we intended
-      if (t.kind === 'assign_shares' || t.kind === 'called_shares') return t.pnl;
-      // If it's a stored option leg, still subtract commission unless it was baked in
-      if (typeof t.commission === 'number') return t.pnl;
-      return t.pnl - roundTripCommission(t.qty);
+    if (t.kind === 'assign_shares' || t.kind === 'called_shares'){
+      return typeof t.pnl === 'number' ? t.pnl : 0;
     }
+    // Option trade
+    if (typeof t.pnl === 'number'){
+      // Legacy stored value — trust it if commission was already baked in
+      if (typeof t.commission === 'number') return t.pnl;
+      // Otherwise assume it's gross and net it using the correct model
+      const side = t.kind === 'long' ? 'long' : 'short';
+      return netClosedPnl(t.entry, t.exit, t.qty, side, t.status);
+    }
+    const side = t.kind === 'long' ? 'long' : 'short';
+    return netClosedPnl(t.entry, t.exit, t.qty, side, t.status);
+  }
+
+  // Fee actually paid on a closed option trade
+  function tradeFees(t){
     if (t.kind === 'assign_shares' || t.kind === 'called_shares') return 0;
-    return netOptionPnl(t.entry, t.exit, t.qty, t.kind === 'long' ? 'long' : 'short');
+    return legFee(t.qty) + feeForClose(t.status) * legFee(t.qty);
   }
 
   // ================= OPEN-TABLE RENDER =================
@@ -693,9 +707,10 @@
       const extra = cols ? cols(p) : '';
       const note = p.note || '';
       const noteDisplay = note ? note : '—';
-      const fee = roundTripCommission(p.qty);
+      const paidFee = legFee(p.qty);
+      const feeHint = `paid $${paidFee.toFixed(2)} to open`;
       return `<tr data-id="${p.id}">
-        <td data-label="Contract"><span class="ticker">${p.ticker}</span><span class="${dteClass}">${typeLabel} ${p.strike} · ${dteLabel}</span><span class="contract-sub">fees $${fee.toFixed(2)}</span></td>
+        <td data-label="Contract"><span class="ticker">${p.ticker}</span><span class="${dteClass}">${typeLabel} ${p.strike} · ${dteLabel}</span><span class="contract-sub">${feeHint}</span></td>
         <td data-label="Underlying">
           <span class="underlying-price loading" data-ticker="${p.ticker}">—</span>
           <span class="underlying-chg" data-ticker="${p.ticker}"></span>
@@ -713,6 +728,7 @@
         <td class="actions" data-label="">
           <div class="row-actions" data-list="${bodyId}" data-id="${p.id}">
             <button class="btn close-btn" data-list="${bodyId}" data-id="${p.id}">close</button>
+            <button class="btn expire-btn" data-list="${bodyId}" data-id="${p.id}">expire</button>
             <button class="btn roll-btn" data-list="${bodyId}" data-id="${p.id}">roll</button>
             ${bodyId === 'csp-body' ? `<button class="btn assign-btn" data-id="${p.id}">assign</button>` : ''}
             ${bodyId === 'cc-body' ? `<button class="btn assign-btn cc-call" data-id="${p.id}">called away</button>` : ''}
@@ -824,11 +840,9 @@
       </tr>`;
     }).join('');
 
-    // wire note edit
     body.querySelectorAll('.watch-cell').forEach(el => {
       el.addEventListener('click', () => beginWatchNoteEdit(el));
     });
-    // wire action buttons
     body.querySelectorAll('.wl-csp').forEach(el => {
       el.addEventListener('click', () => prefillAddForm('csp', el.dataset.ticker));
     });
@@ -872,9 +886,7 @@
     if (!k) return;
     document.getElementById(`${k}-add-panel`).classList.add('open');
     document.getElementById(`${k}-ticker`).value = ticker;
-    // Scroll the form into view so it's obvious something happened
     document.getElementById(`${k}-add-panel`).scrollIntoView({ behavior:'smooth', block:'center' });
-    // Focus the next sensible field
     const nextId = k === 'long' ? 'long-strike' : (k === 'csp' ? 'csp-strike' : 'cc-strike');
     document.getElementById(nextId).focus();
   }
@@ -901,7 +913,8 @@
       const typeLabel = t.type || '';
       const strikeLabel = (typeof t.strike === 'number' && t.strike > 0) ? `$${t.strike.toFixed(2)}` : '—';
       const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares';
-      const feeLabel = isShare ? '—' : `$${roundTripCommission(t.qty).toFixed(2)}`;
+      const fees = tradeFees(t);
+      const feeLabel = isShare ? '—' : `$${fees.toFixed(2)}`;
       return `<tr>
         <td data-label="Contract"><span class="ticker">${t.ticker}</span><span class="contract-sub">${typeLabel}${typeLabel ? ' ' : ''}${t.strike ? t.strike : ''}</span></td>
         <td data-label="Strategy">${kindLabel(t.kind)}${t.rolled ? ' <span style="color:var(--silver-faint);font-size:10px;">(rolled)</span>' : ''}</td>
@@ -924,7 +937,7 @@
     const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
     const capitalDeployed = openRiskLong + openRiskCsp + openRiskLots;
 
-    // Unrealized now net of expected round-trip commission on each open option
+    // Open P&L: only open-leg fees subtracted (what you've actually paid so far).
     const unrealized =
       longs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'long'), 0) +
       csps.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0) +
@@ -942,21 +955,12 @@
     const ytd = netPnl + shareUnreal + dividendsTotal;
     const accountValue = startingBalance + ytd;
 
-    // Commissions: realized round-trips on closed trades + expected round-trips on open
-    // options. This is "commissions paid + accrued", which is what you want for a
-    // forward-looking number; the "paid so far" figure is separately derived below.
-    const commissionsOnClosed = recentTrades
-      .filter(t => t.kind==='long' || t.kind==='csp' || t.kind==='cc')
-      .reduce((a,t) => a + roundTripCommission(t.qty), 0);
-    const commissionsOpenAccrued =
-      [...longs, ...csps, ...ccs].reduce((a,p) => a + roundTripCommission(p.qty), 0);
-    const commissionsPaidSoFar =
-      recentTrades
-        .filter(t => t.kind==='long' || t.kind==='csp' || t.kind==='cc')
-        .reduce((a,t) => a + roundTripCommission(t.qty), 0) +
-      [...longs, ...csps, ...ccs].reduce((a,p) => a + legCommission(p.qty), 0); // only the open leg is paid for opens
-
-    const commissionsTotal = commissionsOnClosed + commissionsOpenAccrued;
+    // Fees PAID so far = open-leg fee on every currently open option,
+    // plus all fees on closed option trades (which already includes the close leg
+    // only for the statuses that incur it).
+    const feesOnClosed = recentTrades.reduce((a,t) => a + tradeFees(t), 0);
+    const feesPaidOnOpenLegs = [...longs, ...csps, ...ccs].reduce((a,p) => a + legFee(p.qty), 0);
+    const feesPaid = feesOnClosed + feesPaidOnOpenLegs;
 
     const premiumCollectedOpen =
       csps.reduce((a,p) => a + p.entry*p.qty*100, 0) +
@@ -966,14 +970,14 @@
       .reduce((a,t) => a + t.entry*t.qty*100, 0);
     const longPremiumPaid = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
 
-    // Cash now subtracts open-leg commissions on new opens plus the closed-trade round-trips
+    // Cash: subtract fees actually paid (open leg on opens + both legs on closed).
     const cashAvailable = startingBalance
       + premiumCollectedOpen + premiumCollectedClosed
       + realized + dividendsTotal
       - openRiskCsp
       - openRiskLots
       - longPremiumPaid
-      - commissionsPaidSoFar;
+      - feesPaid;
 
     let annPnlSum = 0;
     let annCapSum = 0;
@@ -997,7 +1001,7 @@
       unrealized, realized, shareUnreal, dividendsTotal, netPnl, ytd, accountValue,
       premiumCollectedOpen, premiumCollectedClosed, longPremiumPaid, cashAvailable,
       portfolioAnnYield, openRiskCspForCash: openRiskCsp,
-      commissionsTotal, commissionsPaidSoFar,
+      feesPaid,
       optionTrades, wins, losses, winRate, avgWin, avgLoss, profitFactor, expectancy
     };
   }
@@ -1044,7 +1048,7 @@
     pfEl.textContent = T.profitFactor === Infinity ? '∞' : (T.optionTrades.length ? T.profitFactor.toFixed(2) : '—');
     pfEl.className = 'value ' + (T.profitFactor < 1 ? 'dim' : '');
     document.getElementById('perf-exp').textContent = T.optionTrades.length ? formatMoney(T.expectancy) : '—';
-    document.getElementById('perf-comm').textContent = '−$' + T.commissionsTotal.toFixed(2);
+    document.getElementById('perf-comm').textContent = '−$' + T.feesPaid.toFixed(2);
 
     return T;
   }
@@ -1501,12 +1505,12 @@
     const host = document.getElementById('ticker-rollup');
     host.innerHTML = '';
     const map = new Map();
-    const get = t => { if (!map.has(t)) map.set(t, { ticker:t, contracts:0, shares:0, premium:0, realized:0, unrealized:0, capital:0, commissions:0 }); return map.get(t); };
-    longs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium -= p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'long'); m.capital += p.entry*p.qty*100; m.commissions += roundTripCommission(p.qty); });
-    csps.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; m.commissions += roundTripCommission(p.qty); });
-    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'short'); m.commissions += roundTripCommission(p.qty); });
+    const get = t => { if (!map.has(t)) map.set(t, { ticker:t, contracts:0, shares:0, premium:0, realized:0, unrealized:0, capital:0, fees:0 }); return map.get(t); };
+    longs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium -= p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'long'); m.capital += p.entry*p.qty*100; m.fees += legFee(p.qty); });
+    csps.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; m.fees += legFee(p.qty); });
+    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'short'); m.fees += legFee(p.qty); });
     shareLots.forEach(l => { const m=get(l.ticker); m.shares += l.shares; m.capital += l.basis*l.shares; const q=getQuotePrice(l.ticker); if (q!=null) m.unrealized += (q-l.basis)*l.shares; });
-    recentTrades.forEach(t => { const m=get(t.ticker); m.realized += tradePnl(t); if (t.kind !== 'assign_shares' && t.kind !== 'called_shares') m.commissions += roundTripCommission(t.qty); });
+    recentTrades.forEach(t => { const m=get(t.ticker); m.realized += tradePnl(t); m.fees += tradeFees(t); });
 
     const rows = [...map.values()].sort((a,b)=>b.capital-a.capital);
     if (rows.length === 0){
@@ -1521,7 +1525,7 @@
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Shares</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Capital</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Net premium</th>
-        <th style="padding:6px 10px;font-weight:500;text-align:right;">Fees</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Fees paid</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Realized</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Unrealized</th>
       </tr></thead>
@@ -1533,7 +1537,7 @@
             <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">${r.shares||'—'}</td>
             <td style="padding:8px 10px;text-align:right;">${formatPlain(r.capital)}</td>
             <td style="padding:8px 10px;text-align:right;">${formatMoney(r.premium)}</td>
-            <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">−$${r.commissions.toFixed(2)}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">−$${r.fees.toFixed(2)}</td>
             <td style="padding:8px 10px;text-align:right;" class="pnl ${pnlClass(r.realized)}">${formatMoney(r.realized)}</td>
             <td style="padding:8px 10px;text-align:right;" class="pnl ${pnlClass(r.unrealized)}">${formatMoney(r.unrealized)}</td>
           </tr>`).join('')}
@@ -1658,6 +1662,17 @@
     document.querySelectorAll('.close-btn').forEach(el => {
       el.addEventListener('click', () => beginClose(el));
     });
+    document.querySelectorAll('.expire-btn').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.dataset.id);
+        const listName = el.dataset.list;
+        const pos = listFor(listName).find(p => p.id === id);
+        if (!pos) return;
+        const fee = legFee(pos.qty);
+        if (!confirm(`Mark ${pos.ticker} $${pos.strike} as expired worthless?\n\nExit price recorded as $0.00. Only the open-leg fee ($${fee.toFixed(2)}) applies — no close fee.`)) return;
+        closePosition(listName, id, 0, 'expired');
+      });
+    });
     document.querySelectorAll('.roll-btn').forEach(el => {
       el.addEventListener('click', () => beginRoll(el));
     });
@@ -1743,19 +1758,19 @@
     const wrap = document.querySelector(`.row-actions[data-list="${listName}"][data-id="${id}"]`);
     const pos = listFor(listName).find(p => p.id === id);
     if (!wrap || !pos) return;
-    const feeNote = `fees $${roundTripCommission(pos.qty).toFixed(2)}`;
+    const closeFee = legFee(pos.qty);
     wrap.innerHTML = `
       <div class="inline-form">
         <input type="number" step="0.01" id="exit-input-${id}" placeholder="exit $">
         <button class="btn primary" id="exit-confirm-${id}">confirm</button>
         <button class="btn ghost" id="exit-cancel-${id}">cancel</button>
-        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">${feeNote}</span>
+        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">+$${closeFee.toFixed(2)} close fee</span>
       </div>`;
     document.getElementById(`exit-cancel-${id}`).addEventListener('click', renderAll);
     document.getElementById(`exit-confirm-${id}`).addEventListener('click', () => {
       const val = parseFloat(document.getElementById(`exit-input-${id}`).value);
       if (isNaN(val) || val < 0) return;
-      closePosition(listName, id, val, daysToExpiry(pos.expiry) < 0 ? 'expired' : 'closed');
+      closePosition(listName, id, val, 'closed');
     });
   }
 
@@ -1789,8 +1804,8 @@
     const defaultNewStrike = isCsp ? pos.strike * 0.95 : (isCc ? pos.strike * 1.05 : pos.strike);
     const defaultNewExpiry = new Date(Date.now() + 45*24*3600*1000).toISOString().slice(0,10);
 
-    const rollFee = roundTripCommission(pos.qty);
-    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing leg fees: $${rollFee.toFixed(2)}\n\nNew strike:`, defaultNewStrike.toFixed(2));
+    const closeFee = legFee(pos.qty);
+    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing-leg fee: $${closeFee.toFixed(2)}\n\nNew strike:`, defaultNewStrike.toFixed(2));
     if (q === null) return;
     const newStrike = parseFloat(q);
     if (isNaN(newStrike) || newStrike <= 0) { alert('Invalid strike.'); return; }
@@ -1804,6 +1819,7 @@
     const newEntry = parseFloat(p);
     if (isNaN(newEntry) || newEntry < 0) { alert('Invalid premium.'); return; }
 
+    // Close leg is "closed" status (active buy/sell to close), so it incurs the close fee.
     recentTrades.push({
       ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
@@ -1835,12 +1851,11 @@
     const settlement = mkt != null ? mkt : pos.strike;
     const shares = pos.qty * 100;
     const shareIntrinsic = (settlement - pos.strike) * shares;
-    const closeFees = legCommission(pos.qty);
     const sourceNote = mkt != null
       ? `Using market price $${mkt.toFixed(2)} for settlement.`
       : `No live quote cached — falling back to strike price (zero share-side P&L). Hit "refresh quotes" first if you want the price move booked.`;
 
-    if (!confirm(`Assign ${pos.ticker} $${pos.strike} put?\n\nBuys ${shares} shares at $${pos.strike}. ${sourceNote}\nClosing-leg commission: $${closeFees.toFixed(2)}\nShare-side P&L booked at assignment: ${formatMoney(shareIntrinsic)}`)) return;
+    if (!confirm(`Assign ${pos.ticker} $${pos.strike} put?\n\nBuys ${shares} shares at $${pos.strike}. ${sourceNote}\nNo close-leg commission on assignment (most brokers charge $0 for this).\nShare-side P&L booked at assignment: ${formatMoney(shareIntrinsic)}`)) return;
 
     closePosition('csp-body', id, 0, 'assigned');
 
@@ -1883,9 +1898,8 @@
     }
     const avgBasis = sharesConsumed > 0 ? basisWeighted / sharesConsumed : pos.strike;
     const shareGain = (pos.strike - avgBasis) * sharesConsumed;
-    const closeFees = legCommission(pos.qty);
 
-    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away?\n\nSells ${sharesConsumed} shares at $${pos.strike} (avg basis $${avgBasis.toFixed(2)}).\nClosing-leg commission: $${closeFees.toFixed(2)}\nShare-side P&L booked at call-away: ${formatMoney(shareGain)}`)) return;
+    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away?\n\nSells ${sharesConsumed} shares at $${pos.strike} (avg basis $${avgBasis.toFixed(2)}).\nNo close-leg commission on call-away.\nShare-side P&L booked: ${formatMoney(shareGain)}`)) return;
 
     closePosition('cc-body', id, 0, 'called_away');
 
@@ -1962,7 +1976,6 @@
     [['date','div-date','date'],['source','div-source','opt'],['amount','div-amount','num']],
     v => { dividends.push({ id: nextId++, date:v.date, source:v.source, amount:v.amount }); });
 
-  // Watchlist add form — different shape (note + optional target)
   document.getElementById('watch-add-toggle').addEventListener('click', () => {
     document.getElementById('watch-add-panel').classList.toggle('open');
   });
@@ -2099,7 +2112,7 @@
     const rows = [['ticker','strategy','type','strike','expiry','qty','entry','exit','closedOn','status','fees','pnl']];
     recentTrades.forEach(t => {
       const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares';
-      const fees = isShare ? 0 : roundTripCommission(t.qty);
+      const fees = tradeFees(t);
       rows.push([
         t.ticker, kindLabel(t.kind), t.type||'', t.strike||'', t.expiry||'', t.qty,
         t.entry.toFixed(2), t.exit.toFixed(2), t.closedOn, t.status, fees.toFixed(2), tradePnl(t).toFixed(2)
@@ -2123,7 +2136,7 @@
   // ================= SAVE / LOAD =================
   function collectState(){
     return {
-      version: 3,
+      version: 4,
       savedAt: new Date().toISOString(),
       startingBalance, longs, csps, ccs, shareLots, dividends, recentTrades, watchlist, nextId, equityHistory
     };
@@ -2205,7 +2218,7 @@
     } catch(e){ /* storage blocked */ }
 
     renderAll();
-    if (el) el.textContent = JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'
+    if (el) el.textContent = JSONBIN_KEY === '$2a$10$MA.Ilz/380lSQpX2LMOhfegneu335XwOgNSHQCxc2apJJ.g1Lxm9a'
       ? 'local only — set JSONBIN_KEY to sync'
       : 'ready';
   })();
