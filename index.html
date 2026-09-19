@@ -84,6 +84,7 @@
   .status-row.st-expired .status-dot{color:var(--silver-faint);}
   .status-row.st-assigned .status-dot{color:var(--white);}
   .status-row.st-called_away .status-dot{color:var(--white);}
+  .status-row.st-watching .status-dot{color:var(--silver);}
 
   .mark-cell{cursor:text;border-bottom:1px dotted var(--silver-faint);}
   .mark-cell:hover{color:var(--white);}
@@ -97,6 +98,7 @@
   .btn.primary:hover{background:var(--white);}
   .btn.ghost{border-color:transparent;color:var(--silver-faint);}
   .btn.ghost:hover{color:var(--silver);}
+  .btn.tiny{font-size:10.5px;padding:3px 7px;margin-right:3px;}
   .inline-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
   .inline-form input{width:70px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--mono);font-size:12.5px;padding:4px 6px;border-radius:2px;}
 
@@ -157,6 +159,11 @@
   .note-cell:hover{color:var(--silver);}
   .note-input{width:180px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--sans);font-size:11px;padding:3px 5px;border-radius:2px;}
 
+  .watch-cell{cursor:text;color:var(--ink);font-family:var(--sans);font-size:12px;border-bottom:1px dotted var(--silver-faint);display:inline-block;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;}
+  .watch-cell.empty{color:var(--silver-faint);font-style:italic;}
+  .watch-cell:hover{color:var(--silver);}
+  .watch-input{width:320px;background:var(--panel-2);border:1px solid var(--silver-dim);color:var(--white);font-family:var(--sans);font-size:12px;padding:3px 5px;border-radius:2px;}
+
   @media (max-width:900px){
     .chart-grid,.chart-grid.three{grid-template-columns:1fr;}
     .stat-strip{flex-wrap:wrap;}
@@ -180,7 +187,7 @@
   <div class="header-row">
     <div>
       <h1>Options Journal</h1>
-      <div class="sub-line">Underlying quotes via Finnhub · synced to JSONBin</div>
+      <div class="sub-line">Underlying quotes via Finnhub · synced to JSONBin · $0.65/contract commission</div>
     </div>
     <div class="header-right">
       <span class="pos-count" id="pos-count">0</span> open across all strategies
@@ -222,7 +229,7 @@
     <div class="ledger-item">
       <div class="label">Net P&L</div>
       <div class="value" id="net-pnl">—</div>
-      <div class="sub">realized + unrealized</div>
+      <div class="sub">realized + unrealized, net of fees</div>
     </div>
     <div class="ledger-item">
       <div class="label">Capital deployed</div>
@@ -258,6 +265,32 @@
     <div class="stat-item"><div class="label">Avg loss</div><div class="value" id="perf-avgloss">—</div></div>
     <div class="stat-item"><div class="label">Profit factor</div><div class="value" id="perf-pf">—</div></div>
     <div class="stat-item"><div class="label">Expectancy / trade</div><div class="value" id="perf-exp">—</div></div>
+    <div class="stat-item"><div class="label">Commissions paid</div><div class="value dim" id="perf-comm">—</div></div>
+  </div>
+
+  <!-- ============ WATCHLIST ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Watchlist</h2><span class="tag">tracking</span>
+    <span class="count" id="watch-count-label"></span>
+  </div>
+  <div class="section-note">Tickers you're stalking. Click a row's buttons to pre-fill a new position form with that ticker.</div>
+  <div class="table-frame">
+    <table id="watch-table">
+      <thead><tr>
+        <th>Ticker</th><th>Price</th><th>Change</th><th>Note</th><th>Added</th><th></th>
+      </tr></thead>
+      <tbody id="watch-body"></tbody>
+    </table>
+  </div>
+  <div class="add-toggle"><button class="btn" id="watch-add-toggle">+ add to watchlist</button></div>
+  <div class="add-panel" id="watch-add-panel">
+    <div class="add-grid lots">
+      <div class="field"><label>Ticker</label><input id="watch-ticker" placeholder="AAPL" maxlength="8"></div>
+      <div class="field"><label>Note</label><input id="watch-note" placeholder="watching for pullback to 140"></div>
+      <div class="field"><label>Target / trigger (optional)</label><input id="watch-target" type="number" step="0.01" placeholder="140.00"></div>
+      <div class="field"><button class="btn primary" id="watch-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="watch-add-error">Fill in at least a ticker.</div>
   </div>
 
   <!-- ============ ANALYTICS ============ -->
@@ -469,7 +502,7 @@
     <table id="recent-table">
       <thead><tr>
         <th>Contract</th><th>Strategy</th><th>Strike</th><th>Closed</th><th>Qty</th>
-        <th>Entry</th><th>Exit</th><th>P&L</th><th>Status</th>
+        <th>Entry</th><th>Exit</th><th>Fees</th><th>P&L</th><th>Status</th>
       </tr></thead>
       <tbody id="recent-body"></tbody>
     </table>
@@ -480,7 +513,7 @@
     <button class="refresh-btn" id="refresh-quotes" title="Force re-fetch all quotes">↻ refresh quotes</button>
   </div>
   <div class="foot-note" style="border-top:none;padding-top:0;">
-    <span class="note">Journal autosaves to JSONBin and syncs across devices. <b>save</b>/<b>load</b>/<b>csv</b> still work as manual backups.</span>
+    <span class="note">Journal autosaves to JSONBin and syncs across devices. All P&amp;L figures are net of $0.65/contract commissions. <b>save</b>/<b>load</b>/<b>csv</b> work as manual backups.</span>
   </div>
 
 </div>
@@ -494,11 +527,13 @@
   const CALL_GAP_MS  = 100;
   const STORAGE_KEY  = 'options-journal-state-v1';
 
+  // Per-contract commission, charged on every leg (open and close).
+  // Change this one number if your broker's rate changes.
+  const COMMISSION_PER_CONTRACT = 0.65;
+
   // ================= CLOUD SYNC (JSONBin) =================
   const JSONBIN_BIN = '6aaea740ffd5d1605319af49';
-  const JSONBIN_ACCOUNT = '6aae98d97e19fe510f392f62'; // for reference only
-  // ⚠️ PASTE YOUR MASTER KEY BELOW. It starts with "$2a$10$..." and you get it
-  // from jsonbin.io → API Keys. Keep it secret; anyone with it can read/write your data.
+  const JSONBIN_ACCOUNT = '6aae98d97e19fe510f392f62';
   const JSONBIN_KEY = '$2a$10$MA.Ilz/380lSQpX2LMOhfegneu335XwOgNSHQCxc2apJJ.g1Lxm9a';
 
   const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN}`;
@@ -518,6 +553,7 @@
   let shareLots = [];
   let dividends = [];
   let recentTrades = [];
+  let watchlist = []; // { id, ticker, note, target, added }
   let nextId = 100;
 
   let equityHistory = [];
@@ -526,13 +562,36 @@
   let apiCalls = 0;
   let rateLimited = false;
   let isUpdating = false;
-  let isSyncing = false;       // true while we're mid-save/load, to suppress echo
-  let pendingSyncAfterLoad = false;
+  let isSyncing = false;
 
   // ================= HELPERS =================
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const calcPnl = (entry, markOrExit, qty, side) =>
+
+  // ----- COMMISSIONS -----
+  // Every option trade pays COMMISSION_PER_CONTRACT per contract on open, and again on close.
+  // Share trades (assign_shares / called_shares) don't pay this fee in our model.
+  function legCommission(qty){
+    return qty * COMMISSION_PER_CONTRACT;
+  }
+  function roundTripCommission(qty){
+    return legCommission(qty) * 2;
+  }
+
+  // Gross option P&L (pre-commission) for a single leg pair
+  const grossOptionPnl = (entry, markOrExit, qty, side) =>
     side === 'short' ? (entry - markOrExit) * qty * 100 : (markOrExit - entry) * qty * 100;
+
+  // Net option P&L = gross minus open + close commission
+  const netOptionPnl = (entry, markOrExit, qty, side) =>
+    grossOptionPnl(entry, markOrExit, qty, side) - roundTripCommission(qty);
+
+  // For OPEN positions, only the OPEN commission has actually been paid.
+  // The close commission is a known future cost we accrue now so "net" is honest.
+  // (This matches how most brokers show open-position P&L if you include the exit fee.)
+  const netOpenPnl = (entry, mark, qty, side) =>
+    grossOptionPnl(entry, mark, qty, side) - roundTripCommission(qty);
+
+  const calcPnl = netOpenPnl; // kept for any legacy call sites
 
   function formatMoney(val){
     if (Math.abs(val) < 0.005) return '$0.00';
@@ -571,7 +630,7 @@
     return `<span class="status-row st-${status}"><span class="status-dot">●</span>${label}</span>`;
   }
   function allTickers(){
-    return [...new Set([...longs, ...csps, ...ccs].map(p => p.ticker))];
+    return [...new Set([...longs, ...csps, ...ccs, ...watchlist].map(p => p.ticker))];
   }
   function getQuotePrice(ticker){
     const q = quoteCache.get(ticker);
@@ -586,9 +645,11 @@
     const total = totalDuration(pos) || dte;
     let periodReturn;
     if (side === 'short'){
-      periodReturn = pos.entry / pos.strike;
+      // Premium net of round-trip commission, as a fraction of strike-collateral
+      const netPremium = pos.entry * pos.qty * 100 - roundTripCommission(pos.qty);
+      periodReturn = netPremium / capital;
     } else {
-      periodReturn = calcPnl(pos.entry, pos.mark, pos.qty, side) / capital;
+      periodReturn = netOpenPnl(pos.entry, pos.mark, pos.qty, side) / capital;
     }
     const annualized = periodReturn * (365 / total);
     return { pct: annualized * 100, dte, periodReturn: periodReturn * 100, capital, totalDuration: total };
@@ -602,10 +663,17 @@
     return `<span class="ann-ret ${cls}">${sign}${r.pct.toFixed(1)}%</span>`;
   }
 
+  // Closed-trade P&L. Options get round-trip commission; shares don't.
   function tradePnl(t){
-    if (typeof t.pnl === 'number') return t.pnl;
-    const side = t.kind === 'long' ? 'long' : 'short';
-    return calcPnl(t.entry, t.exit, t.qty, side);
+    if (typeof t.pnl === 'number'){
+      // Manually-stored P&L (share-side legs) — already net of anything we intended
+      if (t.kind === 'assign_shares' || t.kind === 'called_shares') return t.pnl;
+      // If it's a stored option leg, still subtract commission unless it was baked in
+      if (typeof t.commission === 'number') return t.pnl;
+      return t.pnl - roundTripCommission(t.qty);
+    }
+    if (t.kind === 'assign_shares' || t.kind === 'called_shares') return 0;
+    return netOptionPnl(t.entry, t.exit, t.qty, t.kind === 'long' ? 'long' : 'short');
   }
 
   // ================= OPEN-TABLE RENDER =================
@@ -617,7 +685,7 @@
       return;
     }
     body.innerHTML = list.map(p => {
-      const pnl = calcPnl(p.entry, p.mark, p.qty, side);
+      const pnl = netOpenPnl(p.entry, p.mark, p.qty, side);
       const dte = daysToExpiry(p.expiry);
       const dteLabel = dte < 0 ? 'expired' : dte + 'd';
       const dteClass = (dte >= 0 && dte <= 3) ? 'contract-sub urgent' : 'contract-sub';
@@ -625,8 +693,9 @@
       const extra = cols ? cols(p) : '';
       const note = p.note || '';
       const noteDisplay = note ? note : '—';
+      const fee = roundTripCommission(p.qty);
       return `<tr data-id="${p.id}">
-        <td data-label="Contract"><span class="ticker">${p.ticker}</span><span class="${dteClass}">${typeLabel} ${p.strike} · ${dteLabel}</span></td>
+        <td data-label="Contract"><span class="ticker">${p.ticker}</span><span class="${dteClass}">${typeLabel} ${p.strike} · ${dteLabel}</span><span class="contract-sub">fees $${fee.toFixed(2)}</span></td>
         <td data-label="Underlying">
           <span class="underlying-price loading" data-ticker="${p.ticker}">—</span>
           <span class="underlying-chg" data-ticker="${p.ticker}"></span>
@@ -716,6 +785,100 @@
     });
   }
 
+  // ================= WATCHLIST =================
+  function renderWatchlist(){
+    const body = document.getElementById('watch-body');
+    document.getElementById('watch-count-label').textContent = watchlist.length + ' tracking';
+    if (watchlist.length === 0){
+      body.innerHTML = `<tr class="empty-row"><td colspan="6">Nothing on the watchlist yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = watchlist.map(w => {
+      const q = getQuotePrice(w.ticker);
+      const priceLabel = q != null ? '$' + q.toFixed(2) : '—';
+      const cached = quoteCache.get(w.ticker);
+      let chgHtml = '';
+      if (cached && cached.changePct != null && !isNaN(cached.changePct)){
+        const up = cached.changePct >= 0;
+        chgHtml = `<span class="underlying-chg ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(cached.changePct).toFixed(2)}%</span>`;
+      }
+      let targetBadge = '';
+      if (w.target != null && q != null){
+        const hit = q <= w.target;
+        targetBadge = `<span class="contract-sub ${hit?'urgent':''}">target $${w.target.toFixed(2)}${hit?' — hit':''}</span>`;
+      } else if (w.target != null){
+        targetBadge = `<span class="contract-sub">target $${w.target.toFixed(2)}</span>`;
+      }
+      return `<tr data-id="${w.id}">
+        <td data-label="Ticker"><span class="ticker">${w.ticker}</span>${targetBadge}</td>
+        <td data-label="Price"><span class="underlying-price" data-ticker="${w.ticker}">${priceLabel}</span></td>
+        <td data-label="Change">${chgHtml || '—'}</td>
+        <td data-label="Note"><span class="watch-cell ${w.note?'':'empty'}" data-id="${w.id}" title="${(w.note||'').replace(/"/g,'&quot;')}">${w.note || 'click to add note'}</span></td>
+        <td data-label="Added">${formatDate(w.added)}</td>
+        <td class="actions" data-label="">
+          <button class="btn tiny wl-csp" data-ticker="${w.ticker}">+ CSP</button>
+          <button class="btn tiny wl-long" data-ticker="${w.ticker}">+ Long</button>
+          <button class="btn tiny wl-cc" data-ticker="${w.ticker}">+ CC</button>
+          <button class="btn tiny danger ghost wl-del" data-id="${w.id}">remove</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // wire note edit
+    body.querySelectorAll('.watch-cell').forEach(el => {
+      el.addEventListener('click', () => beginWatchNoteEdit(el));
+    });
+    // wire action buttons
+    body.querySelectorAll('.wl-csp').forEach(el => {
+      el.addEventListener('click', () => prefillAddForm('csp', el.dataset.ticker));
+    });
+    body.querySelectorAll('.wl-long').forEach(el => {
+      el.addEventListener('click', () => prefillAddForm('long', el.dataset.ticker));
+    });
+    body.querySelectorAll('.wl-cc').forEach(el => {
+      el.addEventListener('click', () => prefillAddForm('cc', el.dataset.ticker));
+    });
+    body.querySelectorAll('.wl-del').forEach(el => {
+      el.addEventListener('click', () => {
+        watchlist = watchlist.filter(w => w.id !== parseInt(el.dataset.id));
+        renderAll();
+      });
+    });
+  }
+
+  function beginWatchNoteEdit(el){
+    const id = parseInt(el.dataset.id);
+    const w = watchlist.find(x => x.id === id);
+    if (!w) return;
+    const input = document.createElement('input');
+    input.className = 'watch-input';
+    input.type = 'text';
+    input.value = w.note || '';
+    input.placeholder = 'note…';
+    el.replaceWith(input);
+    input.focus();
+    input.select();
+    const commit = () => {
+      w.note = input.value.trim();
+      renderAll();
+    };
+    input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
+    input.addEventListener('blur', commit);
+  }
+
+  function prefillAddForm(kind, ticker){
+    const map = { csp:'csp', long:'long', cc:'cc' };
+    const k = map[kind];
+    if (!k) return;
+    document.getElementById(`${k}-add-panel`).classList.add('open');
+    document.getElementById(`${k}-ticker`).value = ticker;
+    // Scroll the form into view so it's obvious something happened
+    document.getElementById(`${k}-add-panel`).scrollIntoView({ behavior:'smooth', block:'center' });
+    // Focus the next sensible field
+    const nextId = k === 'long' ? 'long-strike' : (k === 'csp' ? 'csp-strike' : 'cc-strike');
+    document.getElementById(nextId).focus();
+  }
+
   function kindLabel(kind){
     return {
       long:'Long',
@@ -730,13 +893,15 @@
     const body = document.getElementById('recent-body');
     document.getElementById('recent-count-label').textContent = recentTrades.length + ' closed';
     if (recentTrades.length === 0){
-      body.innerHTML = `<tr class="empty-row"><td colspan="9">No closed trades yet.</td></tr>`;
+      body.innerHTML = `<tr class="empty-row"><td colspan="10">No closed trades yet.</td></tr>`;
       return;
     }
     body.innerHTML = recentTrades.slice().reverse().map(t => {
       const pnl = tradePnl(t);
       const typeLabel = t.type || '';
       const strikeLabel = (typeof t.strike === 'number' && t.strike > 0) ? `$${t.strike.toFixed(2)}` : '—';
+      const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares';
+      const feeLabel = isShare ? '—' : `$${roundTripCommission(t.qty).toFixed(2)}`;
       return `<tr>
         <td data-label="Contract"><span class="ticker">${t.ticker}</span><span class="contract-sub">${typeLabel}${typeLabel ? ' ' : ''}${t.strike ? t.strike : ''}</span></td>
         <td data-label="Strategy">${kindLabel(t.kind)}${t.rolled ? ' <span style="color:var(--silver-faint);font-size:10px;">(rolled)</span>' : ''}</td>
@@ -745,6 +910,7 @@
         <td data-label="Qty">${t.qty}</td>
         <td data-label="Entry">$${t.entry.toFixed(2)}</td>
         <td data-label="Exit">$${t.exit.toFixed(2)}</td>
+        <td data-label="Fees">${feeLabel}</td>
         <td data-label="P&L"><span class="pnl ${pnlClass(pnl)}">${formatMoney(pnl)}</span></td>
         <td data-label="Status">${statusRow(t.status)}</td>
       </tr>`;
@@ -758,10 +924,11 @@
     const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
     const capitalDeployed = openRiskLong + openRiskCsp + openRiskLots;
 
+    // Unrealized now net of expected round-trip commission on each open option
     const unrealized =
-      longs.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'long'), 0) +
-      csps.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0) +
-      ccs.reduce((a,p) => a + calcPnl(p.entry,p.mark,p.qty,'short'), 0);
+      longs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'long'), 0) +
+      csps.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0) +
+      ccs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0);
 
     const realized = recentTrades.reduce((a,t) => a + tradePnl(t), 0);
 
@@ -775,6 +942,22 @@
     const ytd = netPnl + shareUnreal + dividendsTotal;
     const accountValue = startingBalance + ytd;
 
+    // Commissions: realized round-trips on closed trades + expected round-trips on open
+    // options. This is "commissions paid + accrued", which is what you want for a
+    // forward-looking number; the "paid so far" figure is separately derived below.
+    const commissionsOnClosed = recentTrades
+      .filter(t => t.kind==='long' || t.kind==='csp' || t.kind==='cc')
+      .reduce((a,t) => a + roundTripCommission(t.qty), 0);
+    const commissionsOpenAccrued =
+      [...longs, ...csps, ...ccs].reduce((a,p) => a + roundTripCommission(p.qty), 0);
+    const commissionsPaidSoFar =
+      recentTrades
+        .filter(t => t.kind==='long' || t.kind==='csp' || t.kind==='cc')
+        .reduce((a,t) => a + roundTripCommission(t.qty), 0) +
+      [...longs, ...csps, ...ccs].reduce((a,p) => a + legCommission(p.qty), 0); // only the open leg is paid for opens
+
+    const commissionsTotal = commissionsOnClosed + commissionsOpenAccrued;
+
     const premiumCollectedOpen =
       csps.reduce((a,p) => a + p.entry*p.qty*100, 0) +
       ccs.reduce((a,p) => a + p.entry*p.qty*100, 0);
@@ -782,12 +965,15 @@
       .filter(t => t.kind==='csp' || t.kind==='cc')
       .reduce((a,t) => a + t.entry*t.qty*100, 0);
     const longPremiumPaid = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
+
+    // Cash now subtracts open-leg commissions on new opens plus the closed-trade round-trips
     const cashAvailable = startingBalance
       + premiumCollectedOpen + premiumCollectedClosed
       + realized + dividendsTotal
       - openRiskCsp
       - openRiskLots
-      - longPremiumPaid;
+      - longPremiumPaid
+      - commissionsPaidSoFar;
 
     let annPnlSum = 0;
     let annCapSum = 0;
@@ -811,6 +997,7 @@
       unrealized, realized, shareUnreal, dividendsTotal, netPnl, ytd, accountValue,
       premiumCollectedOpen, premiumCollectedClosed, longPremiumPaid, cashAvailable,
       portfolioAnnYield, openRiskCspForCash: openRiskCsp,
+      commissionsTotal, commissionsPaidSoFar,
       optionTrades, wins, losses, winRate, avgWin, avgLoss, profitFactor, expectancy
     };
   }
@@ -857,6 +1044,7 @@
     pfEl.textContent = T.profitFactor === Infinity ? '∞' : (T.optionTrades.length ? T.profitFactor.toFixed(2) : '—');
     pfEl.className = 'value ' + (T.profitFactor < 1 ? 'dim' : '');
     document.getElementById('perf-exp').textContent = T.optionTrades.length ? formatMoney(T.expectancy) : '—';
+    document.getElementById('perf-comm').textContent = '−$' + T.commissionsTotal.toFixed(2);
 
     return T;
   }
@@ -962,9 +1150,9 @@
       else strat['Shares'].realized += p;
     });
     strat['Dividends'].realized = T.dividendsTotal;
-    longs.forEach(p => strat['Long'].unreal += calcPnl(p.entry,p.mark,p.qty,'long'));
-    csps.forEach(p => strat['CSP'].unreal += calcPnl(p.entry,p.mark,p.qty,'short'));
-    ccs.forEach(p => strat['CC'].unreal += calcPnl(p.entry,p.mark,p.qty,'short'));
+    longs.forEach(p => strat['Long'].unreal += netOpenPnl(p.entry,p.mark,p.qty,'long'));
+    csps.forEach(p => strat['CSP'].unreal += netOpenPnl(p.entry,p.mark,p.qty,'short'));
+    ccs.forEach(p => strat['CC'].unreal += netOpenPnl(p.entry,p.mark,p.qty,'short'));
     strat['Shares'].unreal = T.shareUnreal;
 
     const rows = Object.entries(strat).map(([k,v]) => ({ name:k, total:v.realized+v.unreal, ...v }));
@@ -1313,12 +1501,12 @@
     const host = document.getElementById('ticker-rollup');
     host.innerHTML = '';
     const map = new Map();
-    const get = t => { if (!map.has(t)) map.set(t, { ticker:t, contracts:0, shares:0, premium:0, realized:0, unrealized:0, capital:0 }); return map.get(t); };
-    longs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium -= p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'long'); m.capital += p.entry*p.qty*100; });
-    csps.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; });
-    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += calcPnl(p.entry,p.mark,p.qty,'short'); });
+    const get = t => { if (!map.has(t)) map.set(t, { ticker:t, contracts:0, shares:0, premium:0, realized:0, unrealized:0, capital:0, commissions:0 }); return map.get(t); };
+    longs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium -= p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'long'); m.capital += p.entry*p.qty*100; m.commissions += roundTripCommission(p.qty); });
+    csps.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'short'); m.capital += p.strike*p.qty*100; m.commissions += roundTripCommission(p.qty); });
+    ccs.forEach(p => { const m=get(p.ticker); m.contracts += p.qty; m.premium += p.entry*p.qty*100; m.unrealized += netOpenPnl(p.entry,p.mark,p.qty,'short'); m.commissions += roundTripCommission(p.qty); });
     shareLots.forEach(l => { const m=get(l.ticker); m.shares += l.shares; m.capital += l.basis*l.shares; const q=getQuotePrice(l.ticker); if (q!=null) m.unrealized += (q-l.basis)*l.shares; });
-    recentTrades.forEach(t => { const m=get(t.ticker); m.realized += tradePnl(t); });
+    recentTrades.forEach(t => { const m=get(t.ticker); m.realized += tradePnl(t); if (t.kind !== 'assign_shares' && t.kind !== 'called_shares') m.commissions += roundTripCommission(t.qty); });
 
     const rows = [...map.values()].sort((a,b)=>b.capital-a.capital);
     if (rows.length === 0){
@@ -1333,6 +1521,7 @@
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Shares</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Capital</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Net premium</th>
+        <th style="padding:6px 10px;font-weight:500;text-align:right;">Fees</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Realized</th>
         <th style="padding:6px 10px;font-weight:500;text-align:right;">Unrealized</th>
       </tr></thead>
@@ -1344,6 +1533,7 @@
             <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">${r.shares||'—'}</td>
             <td style="padding:8px 10px;text-align:right;">${formatPlain(r.capital)}</td>
             <td style="padding:8px 10px;text-align:right;">${formatMoney(r.premium)}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--silver-dim);">−$${r.commissions.toFixed(2)}</td>
             <td style="padding:8px 10px;text-align:right;" class="pnl ${pnlClass(r.realized)}">${formatMoney(r.realized)}</td>
             <td style="padding:8px 10px;text-align:right;" class="pnl ${pnlClass(r.unrealized)}">${formatMoney(r.unrealized)}</td>
           </tr>`).join('')}
@@ -1370,13 +1560,11 @@
   let saveTimer;
 
   function autosave(){
-    // Always write local first as an offline cache
     const el = document.getElementById('autosave-status');
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
     } catch(e){ /* local blocked — fine, cloud is source of truth */ }
 
-    // Debounce cloud save so typing a mark doesn't hammer the API
     clearTimeout(saveTimer);
     saveTimer = setTimeout(cloudSave, 800);
     if (el) el.textContent = 'syncing…';
@@ -1420,7 +1608,6 @@
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const json = await resp.json();
       const data = json.record;
-      // Placeholder from creation is {} or {"version":0} — ignore those
       if (data && typeof data === 'object' && data.version){
         return data;
       }
@@ -1434,6 +1621,7 @@
   function renderAll(){
     const T = renderLedgers();
     snapshotEquity(T.accountValue);
+    renderWatchlist();
     renderLong();
     renderCsp();
     renderCc();
@@ -1555,11 +1743,13 @@
     const wrap = document.querySelector(`.row-actions[data-list="${listName}"][data-id="${id}"]`);
     const pos = listFor(listName).find(p => p.id === id);
     if (!wrap || !pos) return;
+    const feeNote = `fees $${roundTripCommission(pos.qty).toFixed(2)}`;
     wrap.innerHTML = `
       <div class="inline-form">
         <input type="number" step="0.01" id="exit-input-${id}" placeholder="exit $">
         <button class="btn primary" id="exit-confirm-${id}">confirm</button>
         <button class="btn ghost" id="exit-cancel-${id}">cancel</button>
+        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">${feeNote}</span>
       </div>`;
     document.getElementById(`exit-cancel-${id}`).addEventListener('click', renderAll);
     document.getElementById(`exit-confirm-${id}`).addEventListener('click', () => {
@@ -1599,7 +1789,8 @@
     const defaultNewStrike = isCsp ? pos.strike * 0.95 : (isCc ? pos.strike * 1.05 : pos.strike);
     const defaultNewExpiry = new Date(Date.now() + 45*24*3600*1000).toISOString().slice(0,10);
 
-    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\n\nNew strike:`, defaultNewStrike.toFixed(2));
+    const rollFee = roundTripCommission(pos.qty);
+    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing leg fees: $${rollFee.toFixed(2)}\n\nNew strike:`, defaultNewStrike.toFixed(2));
     if (q === null) return;
     const newStrike = parseFloat(q);
     if (isNaN(newStrike) || newStrike <= 0) { alert('Invalid strike.'); return; }
@@ -1613,11 +1804,10 @@
     const newEntry = parseFloat(p);
     if (isNaN(newEntry) || newEntry < 0) { alert('Invalid premium.'); return; }
 
-    const closeExit = curMark;
     recentTrades.push({
       ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
-      entry: pos.entry, exit: closeExit,
+      entry: pos.entry, exit: curMark,
       closedOn: new Date().toISOString().slice(0,10),
       status: 'closed', kind: kindFor(listName), rolled: true
     });
@@ -1645,11 +1835,12 @@
     const settlement = mkt != null ? mkt : pos.strike;
     const shares = pos.qty * 100;
     const shareIntrinsic = (settlement - pos.strike) * shares;
+    const closeFees = legCommission(pos.qty);
     const sourceNote = mkt != null
       ? `Using market price $${mkt.toFixed(2)} for settlement.`
       : `No live quote cached — falling back to strike price (zero share-side P&L). Hit "refresh quotes" first if you want the price move booked.`;
 
-    if (!confirm(`Assign ${pos.ticker} $${pos.strike} put?\n\nBuys ${shares} shares at $${pos.strike}. ${sourceNote}\n\nShare-side P&L booked at assignment: ${formatMoney(shareIntrinsic)}`)) return;
+    if (!confirm(`Assign ${pos.ticker} $${pos.strike} put?\n\nBuys ${shares} shares at $${pos.strike}. ${sourceNote}\nClosing-leg commission: $${closeFees.toFixed(2)}\nShare-side P&L booked at assignment: ${formatMoney(shareIntrinsic)}`)) return;
 
     closePosition('csp-body', id, 0, 'assigned');
 
@@ -1692,8 +1883,9 @@
     }
     const avgBasis = sharesConsumed > 0 ? basisWeighted / sharesConsumed : pos.strike;
     const shareGain = (pos.strike - avgBasis) * sharesConsumed;
+    const closeFees = legCommission(pos.qty);
 
-    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away?\n\nSells ${sharesConsumed} shares at $${pos.strike} (avg basis $${avgBasis.toFixed(2)}).\nShare-side P&L booked at call-away: ${formatMoney(shareGain)}`)) return;
+    if (!confirm(`Mark ${pos.ticker} $${pos.strike} call as called away?\n\nSells ${sharesConsumed} shares at $${pos.strike} (avg basis $${avgBasis.toFixed(2)}).\nClosing-leg commission: $${closeFees.toFixed(2)}\nShare-side P&L booked at call-away: ${formatMoney(shareGain)}`)) return;
 
     closePosition('cc-body', id, 0, 'called_away');
 
@@ -1728,6 +1920,7 @@
         const raw = document.getElementById(id).value;
         if (kind === 'text') { vals[key] = raw.trim().toUpperCase(); if (!vals[key]) ok = false; }
         else if (kind === 'opt') { vals[key] = raw.trim(); }
+        else if (kind === 'optnum') { vals[key] = raw === '' ? null : parseFloat(raw); if (vals[key] != null && isNaN(vals[key])) ok = false; }
         else if (kind === 'select') { vals[key] = raw; }
         else if (kind === 'date') { vals[key] = raw; if (!raw) ok = false; }
         else { vals[key] = parseFloat(raw); if (isNaN(vals[key]) || (kind==='qty' && vals[key] <= 0) || (kind==='num' && vals[key] < 0)) ok = false; }
@@ -1768,6 +1961,29 @@
   wireAddForm('div-add-toggle','div-add-panel','div-add-confirm','div-add-error',
     [['date','div-date','date'],['source','div-source','opt'],['amount','div-amount','num']],
     v => { dividends.push({ id: nextId++, date:v.date, source:v.source, amount:v.amount }); });
+
+  // Watchlist add form — different shape (note + optional target)
+  document.getElementById('watch-add-toggle').addEventListener('click', () => {
+    document.getElementById('watch-add-panel').classList.toggle('open');
+  });
+  document.getElementById('watch-add-confirm').addEventListener('click', () => {
+    const ticker = document.getElementById('watch-ticker').value.trim().toUpperCase();
+    const note = document.getElementById('watch-note').value.trim();
+    const targetRaw = document.getElementById('watch-target').value;
+    const target = targetRaw === '' ? null : parseFloat(targetRaw);
+    const errEl = document.getElementById('watch-add-error');
+    if (!ticker || (targetRaw !== '' && isNaN(target))){
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    watchlist.push({ id: nextId++, ticker, note, target, added: new Date().toISOString().slice(0,10) });
+    document.getElementById('watch-ticker').value = '';
+    document.getElementById('watch-note').value = '';
+    document.getElementById('watch-target').value = '';
+    document.getElementById('watch-add-panel').classList.remove('open');
+    renderAll();
+  });
 
   // ================= QUOTES =================
   function bumpUsage(){
@@ -1861,6 +2077,7 @@
     isUpdating = false;
 
     const T = renderLedgers();
+    renderWatchlist();
     renderLots();
     renderAnalytics(T);
     snapshotEquity(T.accountValue);
@@ -1879,11 +2096,13 @@
 
   // ================= CSV EXPORT =================
   document.getElementById('csv-btn').addEventListener('click', () => {
-    const rows = [['ticker','strategy','type','strike','expiry','qty','entry','exit','closedOn','status','pnl']];
+    const rows = [['ticker','strategy','type','strike','expiry','qty','entry','exit','closedOn','status','fees','pnl']];
     recentTrades.forEach(t => {
+      const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares';
+      const fees = isShare ? 0 : roundTripCommission(t.qty);
       rows.push([
         t.ticker, kindLabel(t.kind), t.type||'', t.strike||'', t.expiry||'', t.qty,
-        t.entry.toFixed(2), t.exit.toFixed(2), t.closedOn, t.status, tradePnl(t).toFixed(2)
+        t.entry.toFixed(2), t.exit.toFixed(2), t.closedOn, t.status, fees.toFixed(2), tradePnl(t).toFixed(2)
       ]);
     });
     const csv = rows.map(r => r.map(c => {
@@ -1904,9 +2123,9 @@
   // ================= SAVE / LOAD =================
   function collectState(){
     return {
-      version: 2,
+      version: 3,
       savedAt: new Date().toISOString(),
-      startingBalance, longs, csps, ccs, shareLots, dividends, recentTrades, nextId, equityHistory
+      startingBalance, longs, csps, ccs, shareLots, dividends, recentTrades, watchlist, nextId, equityHistory
     };
   }
 
@@ -1919,6 +2138,7 @@
     shareLots = Array.isArray(data.shareLots) ? data.shareLots : [];
     dividends = Array.isArray(data.dividends) ? data.dividends : [];
     recentTrades = Array.isArray(data.recentTrades) ? data.recentTrades : [];
+    watchlist = Array.isArray(data.watchlist) ? data.watchlist : [];
     equityHistory = Array.isArray(data.equityHistory) ? data.equityHistory : [];
     nextId = typeof data.nextId === 'number' ? data.nextId : nextId;
     quoteCache.clear();
@@ -1967,7 +2187,6 @@
     const el = document.getElementById('autosave-status');
     if (el) el.textContent = 'connecting…';
 
-    // 1. Try cloud
     const cloudData = await cloudLoad();
     if (cloudData){
       applyState(cloudData);
@@ -1975,21 +2194,18 @@
       return;
     }
 
-    // 2. Fall back to local cache
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw){
         applyState(JSON.parse(raw));
         if (el) el.textContent = 'loaded from local cache';
-        // Push local up to cloud on first successful load so we don't lose it
         cloudSave();
         return;
       }
     } catch(e){ /* storage blocked */ }
 
-    // 3. Fresh start with defaults
     renderAll();
-    if (el) el.textContent = JSONBIN_KEY === '$2a$10$MA.Ilz/380lSQpX2LMOhfegneu335XwOgNSHQCxc2apJJ.g1Lxm9a'
+    if (el) el.textContent = JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'
       ? 'local only — set JSONBIN_KEY to sync'
       : 'ready';
   })();
