@@ -569,30 +569,22 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ----- COMMISSIONS -----
-  // One leg = one commission charge. Open leg is always charged. Close leg is
-  // charged only if the trade is actively closed (not expired / assigned / called away).
   function legFee(qty){
     return qty * COMMISSION_PER_CONTRACT;
   }
   function feeForClose(status){
-    // No fee on the close side for anything that wasn't a buy/sell-to-close.
     if (status === 'expired' || status === 'assigned' || status === 'called_away') return 0;
-    return 1; // multiplier — caller multiplies by legFee(qty)
+    return 1;
   }
 
-  // Gross option P&L (pre-commission) for a single leg pair
   const grossOptionPnl = (entry, markOrExit, qty, side) =>
     side === 'short' ? (entry - markOrExit) * qty * 100 : (markOrExit - entry) * qty * 100;
 
-  // Open-position P&L: only the open leg's commission has actually been paid.
-  // If it later expires worthless, no close fee applies; if you buy to close,
-  // the close fee appears when you record the close.
   const netOpenPnl = (entry, mark, qty, side) =>
     grossOptionPnl(entry, mark, qty, side) - legFee(qty);
 
-  const calcPnl = netOpenPnl; // legacy alias
+  const calcPnl = netOpenPnl;
 
-  // Closed-trade P&L. status drives whether the close leg was charged.
   function netClosedPnl(entry, exit, qty, side, status){
     return grossOptionPnl(entry, exit, qty, side) - legFee(qty) - feeForClose(status) * legFee(qty);
   }
@@ -649,7 +641,6 @@
     const total = totalDuration(pos) || dte;
     let periodReturn;
     if (side === 'short'){
-      // Net premium after open-leg fee only — that's what you net if it expires
       const netPremium = pos.entry * pos.qty * 100 - legFee(pos.qty);
       periodReturn = netPremium / capital;
     } else {
@@ -667,16 +658,12 @@
     return `<span class="ann-ret ${cls}">${sign}${r.pct.toFixed(1)}%</span>`;
   }
 
-  // Closed-trade P&L — reads t.status to decide whether to charge the close leg.
   function tradePnl(t){
     if (t.kind === 'assign_shares' || t.kind === 'called_shares'){
       return typeof t.pnl === 'number' ? t.pnl : 0;
     }
-    // Option trade
     if (typeof t.pnl === 'number'){
-      // Legacy stored value — trust it if commission was already baked in
       if (typeof t.commission === 'number') return t.pnl;
-      // Otherwise assume it's gross and net it using the correct model
       const side = t.kind === 'long' ? 'long' : 'short';
       return netClosedPnl(t.entry, t.exit, t.qty, side, t.status);
     }
@@ -684,7 +671,6 @@
     return netClosedPnl(t.entry, t.exit, t.qty, side, t.status);
   }
 
-  // Fee actually paid on a closed option trade
   function tradeFees(t){
     if (t.kind === 'assign_shares' || t.kind === 'called_shares') return 0;
     return legFee(t.qty) + feeForClose(t.status) * legFee(t.qty);
@@ -937,7 +923,6 @@
     const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
     const capitalDeployed = openRiskLong + openRiskCsp + openRiskLots;
 
-    // Open P&L: only open-leg fees subtracted (what you've actually paid so far).
     const unrealized =
       longs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'long'), 0) +
       csps.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0) +
@@ -955,9 +940,6 @@
     const ytd = netPnl + shareUnreal + dividendsTotal;
     const accountValue = startingBalance + ytd;
 
-    // Fees PAID so far = open-leg fee on every currently open option,
-    // plus all fees on closed option trades (which already includes the close leg
-    // only for the statuses that incur it).
     const feesOnClosed = recentTrades.reduce((a,t) => a + tradeFees(t), 0);
     const feesPaidOnOpenLegs = [...longs, ...csps, ...ccs].reduce((a,p) => a + legFee(p.qty), 0);
     const feesPaid = feesOnClosed + feesPaidOnOpenLegs;
@@ -970,7 +952,6 @@
       .reduce((a,t) => a + t.entry*t.qty*100, 0);
     const longPremiumPaid = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
 
-    // Cash: subtract fees actually paid (open leg on opens + both legs on closed).
     const cashAvailable = startingBalance
       + premiumCollectedOpen + premiumCollectedClosed
       + realized + dividendsTotal
@@ -1819,7 +1800,6 @@
     const newEntry = parseFloat(p);
     if (isNaN(newEntry) || newEntry < 0) { alert('Invalid premium.'); return; }
 
-    // Close leg is "closed" status (active buy/sell to close), so it incurs the close fee.
     recentTrades.push({
       ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
@@ -2111,7 +2091,6 @@
   document.getElementById('csv-btn').addEventListener('click', () => {
     const rows = [['ticker','strategy','type','strike','expiry','qty','entry','exit','closedOn','status','fees','pnl']];
     recentTrades.forEach(t => {
-      const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares';
       const fees = tradeFees(t);
       rows.push([
         t.ticker, kindLabel(t.kind), t.type||'', t.strike||'', t.expiry||'', t.qty,
@@ -2218,7 +2197,7 @@
     } catch(e){ /* storage blocked */ }
 
     renderAll();
-    if (el) el.textContent = JSONBIN_KEY === '$2a$10$MA.Ilz/380lSQpX2LMOhfegneu335XwOgNSHQCxc2apJJ.g1Lxm9a'
+    if (el) el.textContent = JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'
       ? 'local only — set JSONBIN_KEY to sync'
       : 'ready';
   })();
