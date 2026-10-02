@@ -572,8 +572,12 @@
   function legFee(qty){
     return qty * COMMISSION_PER_CONTRACT;
   }
-  function feeForClose(status){
+  function feeForClose(status, exitPrice, kind){
+    // No close fee for legs that aren't actively bought/sold to close
     if (status === 'expired' || status === 'assigned' || status === 'called_away') return 0;
+    // Buy-to-close short options for less than one commission (0.65) per contract:
+    // waive the close fee. Longs closing at any price still pay.
+    if ((kind === 'csp' || kind === 'cc') && typeof exitPrice === 'number' && exitPrice < COMMISSION_PER_CONTRACT) return 0;
     return 1;
   }
 
@@ -585,8 +589,8 @@
 
   const calcPnl = netOpenPnl;
 
-  function netClosedPnl(entry, exit, qty, side, status){
-    return grossOptionPnl(entry, exit, qty, side) - legFee(qty) - feeForClose(status) * legFee(qty);
+  function netClosedPnl(entry, exit, qty, side, status, kind){
+    return grossOptionPnl(entry, exit, qty, side) - legFee(qty) - feeForClose(status, exit, kind) * legFee(qty);
   }
 
   function formatMoney(val){
@@ -665,15 +669,15 @@
     if (typeof t.pnl === 'number'){
       if (typeof t.commission === 'number') return t.pnl;
       const side = t.kind === 'long' ? 'long' : 'short';
-      return netClosedPnl(t.entry, t.exit, t.qty, side, t.status);
+      return netClosedPnl(t.entry, t.exit, t.qty, side, t.status, t.kind);
     }
     const side = t.kind === 'long' ? 'long' : 'short';
-    return netClosedPnl(t.entry, t.exit, t.qty, side, t.status);
+    return netClosedPnl(t.entry, t.exit, t.qty, side, t.status, t.kind);
   }
 
   function tradeFees(t){
     if (t.kind === 'assign_shares' || t.kind === 'called_shares') return 0;
-    return legFee(t.qty) + feeForClose(t.status) * legFee(t.qty);
+    return legFee(t.qty) + feeForClose(t.status, t.exit, t.kind) * legFee(t.qty);
   }
 
   // ================= OPEN-TABLE RENDER =================
@@ -923,10 +927,22 @@
     const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
     const capitalDeployed = openRiskLong + openRiskCsp + openRiskLots;
 
-    const unrealized =
+    // P&L-only unrealized: mark-to-market on open positions, net of the open fee.
+    const unrealizedPnl =
       longs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'long'), 0) +
       csps.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0) +
       ccs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0);
+
+    // Total gross premium outstanding on open short options. This is the full
+    // entry premium for every still-open CSP/CC, regardless of mark — i.e. money
+    // you've been paid but haven't yet earned into realized. Moves to realized
+    // when the position closes/expires.
+    const premiumToCollect =
+      csps.reduce((a,p) => a + p.entry * p.qty * 100, 0) +
+      ccs.reduce((a,p) => a + p.entry * p.qty * 100, 0);
+
+    // Unrealized shown in the ledger = P&L + gross premium outstanding on shorts.
+    const unrealized = unrealizedPnl + premiumToCollect;
 
     const realized = recentTrades.reduce((a,t) => a + tradePnl(t), 0);
 
@@ -979,7 +995,8 @@
 
     return {
       openRiskLong, openRiskCsp, openRiskLots, capitalDeployed,
-      unrealized, realized, shareUnreal, dividendsTotal, netPnl, ytd, accountValue,
+      unrealized, unrealizedPnl, premiumToCollect,
+      realized, shareUnreal, dividendsTotal, netPnl, ytd, accountValue,
       premiumCollectedOpen, premiumCollectedClosed, longPremiumPaid, cashAvailable,
       portfolioAnnYield, openRiskCspForCash: openRiskCsp,
       feesPaid,
@@ -1005,7 +1022,9 @@
     document.getElementById('open-risk').textContent = formatPlain(T.capitalDeployed);
     document.getElementById('open-risk-sub').textContent = (longs.length+csps.length) + ' open, ' + shareLots.length + ' lot' + (shareLots.length===1?'':'s');
     document.getElementById('realized-sub').textContent = recentTrades.length + ' closed';
-    document.getElementById('unrealized-sub').textContent = (longs.length+csps.length+ccs.length) + ' open';
+    // Breakdown so user can see what's inside "Unrealized": mark P&L + uncollected premium
+    const unrealSub = `mark ${formatMoney(T.unrealizedPnl)} + premium outstanding ${formatMoney(T.premiumToCollect)} on ${longs.length+csps.length+ccs.length} open`;
+    document.getElementById('unrealized-sub').textContent = unrealSub;
     document.getElementById('ytd-pct').textContent = startingBalance > 0 ? (T.ytd/startingBalance*100 >= 0 ? '+' : '') + (T.ytd/startingBalance*100).toFixed(1) + '% of starting balance' : '—';
     document.getElementById('div-total').textContent = '+$' + T.dividendsTotal.toFixed(2);
     document.getElementById('div-sub').textContent = dividends.length + ' payout' + (dividends.length===1?'':'s') + ' logged';
@@ -1745,7 +1764,7 @@
         <input type="number" step="0.01" id="exit-input-${id}" placeholder="exit $">
         <button class="btn primary" id="exit-confirm-${id}">confirm</button>
         <button class="btn ghost" id="exit-cancel-${id}">cancel</button>
-        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">+$${closeFee.toFixed(2)} close fee</span>
+        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">+$${closeFee.toFixed(2)} close fee, waived if exit < $0.65</span>
       </div>`;
     document.getElementById(`exit-cancel-${id}`).addEventListener('click', renderAll);
     document.getElementById(`exit-confirm-${id}`).addEventListener('click', () => {
@@ -1786,7 +1805,7 @@
     const defaultNewExpiry = new Date(Date.now() + 45*24*3600*1000).toISOString().slice(0,10);
 
     const closeFee = legFee(pos.qty);
-    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing-leg fee: $${closeFee.toFixed(2)}\n\nNew strike:`, defaultNewStrike.toFixed(2));
+    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing-leg fee: $${closeFee.toFixed(2)} (waived if close < $0.65)\n\nNew strike:`, defaultNewStrike.toFixed(2));
     if (q === null) return;
     const newStrike = parseFloat(q);
     if (isNaN(newStrike) || newStrike <= 0) { alert('Invalid strike.'); return; }
@@ -2197,9 +2216,11 @@
     } catch(e){ /* storage blocked */ }
 
     renderAll();
-    if (el) el.textContent = JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'
-      ? 'local only — set JSONBIN_KEY to sync'
-      : 'ready';
+    if (el) el.textContent === undefined || el.textContent === 'connecting…'
+      ? (el.textContent = JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'
+          ? 'local only — set JSONBIN_KEY to sync'
+          : 'ready')
+      : null;
   })();
 </script>
 </body>
