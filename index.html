@@ -561,9 +561,11 @@
 
   const quoteCache = new Map();
   let apiCalls = 0;
-  let rateLimited = false;
+  let rateLimitedUntil = 0;
   let isUpdating = false;
   let isSyncing = false;
+  let cloudReady = false;
+  let savePending = false;
 
   // ================= HELPERS =================
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -599,7 +601,8 @@
     return val > 0 ? `+$${abs}` : `($${abs})`;
   }
   function formatPlain(val){
-    return '$' + val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const s = Math.abs(val).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (val < 0 ? '-$' : '$') + s;
   }
   function pnlClass(val){
     if (val > 0.01) return 'pos';
@@ -615,9 +618,15 @@
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   }
+  function todayStr(offsetDays = 0){
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
   function daysToExpiry(dateStr){
-    const d = new Date(dateStr + 'T00:00:00');
-    return Math.ceil((d - new Date()) / (1000*60*60*24));
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((new Date(dateStr + 'T00:00:00') - today) / 86400000);
   }
   function totalDuration(pos){
     if (!pos.opened) return null;
@@ -862,12 +871,7 @@
     el.replaceWith(input);
     input.focus();
     input.select();
-    const commit = () => {
-      w.note = input.value.trim();
-      renderAll();
-    };
-    input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
-    input.addEventListener('blur', commit);
+    wireInlineEdit(input, v => { w.note = v.trim(); });
   }
 
   function prefillAddForm(kind, ticker){
@@ -927,33 +931,22 @@
     const openRiskLots = shareLots.reduce((a,l) => a + l.basis*l.shares, 0);
     const capitalDeployed = openRiskLong + openRiskCsp + openRiskLots;
 
-    // P&L-only unrealized: mark-to-market on open positions, net of the open fee.
     const unrealizedPnl =
       longs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'long'), 0) +
       csps.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0) +
       ccs.reduce((a,p) => a + netOpenPnl(p.entry,p.mark,p.qty,'short'), 0);
-
-    // Total gross premium outstanding on open short options. This is the full
-    // entry premium for every still-open CSP/CC, regardless of mark — i.e. money
-    // you've been paid but haven't yet earned into realized. Moves to realized
-    // when the position closes/expires.
     const premiumToCollect =
       csps.reduce((a,p) => a + p.entry * p.qty * 100, 0) +
       ccs.reduce((a,p) => a + p.entry * p.qty * 100, 0);
-
-    // Unrealized shown in the ledger = P&L + gross premium outstanding on shorts.
-    const unrealized = unrealizedPnl + premiumToCollect;
-
-    const realized = recentTrades.reduce((a,t) => a + tradePnl(t), 0);
-
     const shareUnreal = shareLots.reduce((a,l) => {
       const q = quoteCache.get(l.ticker);
       return a + (q && q.price != null ? (q.price - l.basis) * l.shares : 0);
     }, 0);
-
+    const unrealized = unrealizedPnl + shareUnreal;
+    const realized = recentTrades.reduce((a,t) => a + tradePnl(t), 0);
     const dividendsTotal = dividends.reduce((a,d) => a + d.amount, 0);
     const netPnl = realized + unrealized;
-    const ytd = netPnl + shareUnreal + dividendsTotal;
+    const ytd = netPnl + dividendsTotal;
     const accountValue = startingBalance + ytd;
 
     const feesOnClosed = recentTrades.reduce((a,t) => a + tradeFees(t), 0);
@@ -969,12 +962,12 @@
     const longPremiumPaid = longs.reduce((a,p) => a + p.entry*p.qty*100, 0);
 
     const cashAvailable = startingBalance
-      + premiumCollectedOpen + premiumCollectedClosed
       + realized + dividendsTotal
-      - openRiskCsp
-      - openRiskLots
+      + premiumCollectedOpen
       - longPremiumPaid
-      - feesPaid;
+      - feesPaidOnOpenLegs
+      - openRiskCsp
+      - openRiskLots;
 
     let annPnlSum = 0;
     let annCapSum = 0;
@@ -1017,13 +1010,13 @@
     setVal('unrealized-pnl', T.unrealized);
     setVal('ytd-pnl', T.ytd);
 
-    document.getElementById('starting-balance').textContent = formatPlain(startingBalance);
+    const sbEl = document.getElementById('starting-balance'); if (sbEl) sbEl.textContent = formatPlain(startingBalance);
     document.getElementById('account-value').textContent = formatPlain(Math.max(T.accountValue,0));
     document.getElementById('open-risk').textContent = formatPlain(T.capitalDeployed);
     document.getElementById('open-risk-sub').textContent = (longs.length+csps.length) + ' open, ' + shareLots.length + ' lot' + (shareLots.length===1?'':'s');
     document.getElementById('realized-sub').textContent = recentTrades.length + ' closed';
     // Breakdown so user can see what's inside "Unrealized": mark P&L + uncollected premium
-    const unrealSub = `mark ${formatMoney(T.unrealizedPnl)} + premium outstanding ${formatMoney(T.premiumToCollect)} on ${longs.length+csps.length+ccs.length} open`;
+    const unrealSub = `options ${formatMoney(T.unrealizedPnl)} + shares ${formatMoney(T.shareUnreal)}`;
     document.getElementById('unrealized-sub').textContent = unrealSub;
     document.getElementById('ytd-pct').textContent = startingBalance > 0 ? (T.ytd/startingBalance*100 >= 0 ? '+' : '') + (T.ytd/startingBalance*100).toFixed(1) + '% of starting balance' : '—';
     document.getElementById('div-total').textContent = '+$' + T.dividendsTotal.toFixed(2);
@@ -1031,7 +1024,7 @@
     document.getElementById('pos-count').textContent = longs.length + csps.length + ccs.length;
 
     const cashEl = document.getElementById('cash-available');
-    cashEl.textContent = formatPlain(Math.max(T.cashAvailable,0));
+    cashEl.textContent = formatPlain(T.cashAvailable);
     cashEl.className = 'value ' + (T.cashAvailable < 0 ? 'dim' : '');
     document.getElementById('cash-collateral').textContent = formatPlain(T.openRiskCspForCash);
     document.getElementById('cash-lots').textContent = formatPlain(T.openRiskLots);
@@ -1055,7 +1048,7 @@
 
   // ================= EQUITY HISTORY =================
   function snapshotEquity(accountValue){
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayStr();
     const last = equityHistory[equityHistory.length-1];
     if (last && last.date === today){
       last.accountValue = accountValue;
@@ -1401,7 +1394,7 @@
     recentTrades.forEach(t => {
       if (t.kind==='csp' || t.kind==='cc') events.push({ date:t.closedOn, v: t.entry*t.qty*100 });
     });
-    const today = new Date().toISOString().slice(0,10);
+    const today = todayStr();
     csps.forEach(p => events.push({ date:today, v: p.entry*p.qty*100 }));
     ccs.forEach(p => events.push({ date:today, v: p.entry*p.qty*100 }));
     dividends.forEach(d => events.push({ date:d.date, v:d.amount }));
@@ -1571,16 +1564,12 @@
 
     clearTimeout(saveTimer);
     saveTimer = setTimeout(cloudSave, 800);
-    if (el) el.textContent = 'syncing…';
+    if (el) el.textContent = cloudReady ? 'syncing…' : 'local only';
   }
 
   async function cloudSave(){
-    if (isSyncing) return;
-    if (!JSONBIN_KEY || JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'){
-      const el = document.getElementById('autosave-status');
-      if (el) el.textContent = 'no cloud key set — local only';
-      return;
-    }
+    if (!cloudReady) return;
+    if (isSyncing){ savePending = true; return; }
     isSyncing = true;
     const el = document.getElementById('autosave-status');
     try {
@@ -1597,28 +1586,24 @@
       if (el) el.textContent = 'synced ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     } catch(e){
       console.error('cloud save failed', e);
-      if (el) el.textContent = 'sync failed — local only';
+      if (el) el.textContent = 'sync failed, local only';
     } finally {
       isSyncing = false;
+      if (savePending){ savePending = false; cloudSave(); }
     }
   }
 
   async function cloudLoad(){
-    if (!JSONBIN_KEY || JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE') return null;
+    if (!JSONBIN_KEY || JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE') return { ok:false };
     try {
-      const resp = await fetch(JSONBIN_URL + '/latest', {
-        headers: { 'X-Master-Key': JSONBIN_KEY }
-      });
+      const resp = await fetch(JSONBIN_URL + '/latest', { headers: { 'X-Master-Key': JSONBIN_KEY } });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const json = await resp.json();
       const data = json.record;
-      if (data && typeof data === 'object' && data.version){
-        return data;
-      }
-      return null;
+      return { ok:true, data: (data && typeof data === 'object' && data.version) ? data : null };
     } catch(e){
       console.warn('cloud load failed', e);
-      return null;
+      return { ok:false };
     }
   }
 
@@ -1652,6 +1637,22 @@
   }
 
   // ================= ROW ACTIONS =================
+  function wireInlineEdit(input, commit, orig){
+    let done = false;
+    const finish = save => {
+      if (done) return;
+      done = true;
+      if (save) commit(input.value);
+      if (orig && input.isConnected) input.replaceWith(orig);
+      renderAll();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') finish(true);
+      else if (e.key === 'Escape') finish(false);
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
   function attachRowHandlers(){
     document.querySelectorAll('.mark-cell').forEach(el => {
       el.addEventListener('click', () => beginMarkEdit(el));
@@ -1699,13 +1700,8 @@
       sb.replaceWith(input);
       input.focus();
       input.select();
-      const commit = () => {
-        const val = parseFloat(input.value);
-        if (!isNaN(val) && val >= 0) startingBalance = val;
-        renderAll();
-      };
-      input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
-      input.addEventListener('blur', commit);
+      wireInlineEdit(input, v => { const val = parseFloat(v);
+        if (!isNaN(val) && val >= 0) startingBalance = val; }, sb);
     };
   }
 
@@ -1722,13 +1718,8 @@
     el.replaceWith(input);
     input.focus();
     input.select();
-    const commit = () => {
-      const val = parseFloat(input.value);
-      if (!isNaN(val) && val >= 0) pos.mark = val;
-      renderAll();
-    };
-    input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
-    input.addEventListener('blur', commit);
+    wireInlineEdit(input, v => { const val = parseFloat(v);
+      if (!isNaN(val) && val >= 0) pos.mark = val; });
   }
 
   function beginNoteEdit(el){
@@ -1744,12 +1735,7 @@
     el.replaceWith(input);
     input.focus();
     input.select();
-    const commit = () => {
-      pos.note = input.value.trim();
-      renderAll();
-    };
-    input.addEventListener('keydown', e => { if (e.key==='Enter') commit(); if (e.key==='Escape') renderAll(); });
-    input.addEventListener('blur', commit);
+    wireInlineEdit(input, v => { pos.note = v.trim(); });
   }
 
   function beginClose(el){
@@ -1764,7 +1750,7 @@
         <input type="number" step="0.01" id="exit-input-${id}" placeholder="exit $">
         <button class="btn primary" id="exit-confirm-${id}">confirm</button>
         <button class="btn ghost" id="exit-cancel-${id}">cancel</button>
-        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">+$${closeFee.toFixed(2)} close fee, waived if exit < $0.65</span>
+        <span style="font-size:10px;color:var(--silver-faint);font-family:var(--mono);">+$${closeFee.toFixed(2)} close fee${listName === 'long-body' ? '' : ', waived if exit < $0.65'}</span>
       </div>`;
     document.getElementById(`exit-cancel-${id}`).addEventListener('click', renderAll);
     document.getElementById(`exit-confirm-${id}`).addEventListener('click', () => {
@@ -1783,7 +1769,7 @@
       ticker: pos.ticker, type: pos.type || (listName==='csp-body' ? 'Put' : 'Call'),
       strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
       entry: pos.entry, exit: exitPrice,
-      closedOn: new Date().toISOString().slice(0,10),
+      closedOn: todayStr(),
       status, kind: kindFor(listName)
     });
     list.splice(idx, 1);
@@ -1802,10 +1788,10 @@
 
     const curMark = pos.mark;
     const defaultNewStrike = isCsp ? pos.strike * 0.95 : (isCc ? pos.strike * 1.05 : pos.strike);
-    const defaultNewExpiry = new Date(Date.now() + 45*24*3600*1000).toISOString().slice(0,10);
+    const defaultNewExpiry = todayStr(45);
 
     const closeFee = legFee(pos.qty);
-    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing-leg fee: $${closeFee.toFixed(2)} (waived if close < $0.65)\n\nNew strike:`, defaultNewStrike.toFixed(2));
+    const q = prompt(`Roll ${pos.ticker} ${pos.type} $${pos.strike} — close at $${curMark.toFixed(2)}.\nClosing-leg fee: $${closeFee.toFixed(2)} ${isLong ? '' : '(waived if close < $0.65)'}\n\nNew strike:`, defaultNewStrike.toFixed(2));
     if (q === null) return;
     const newStrike = parseFloat(q);
     if (isNaN(newStrike) || newStrike <= 0) { alert('Invalid strike.'); return; }
@@ -1823,7 +1809,7 @@
       ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: pos.strike, expiry: pos.expiry, qty: pos.qty,
       entry: pos.entry, exit: curMark,
-      closedOn: new Date().toISOString().slice(0,10),
+      closedOn: todayStr(),
       status: 'closed', kind: kindFor(listName), rolled: true
     });
 
@@ -1833,7 +1819,7 @@
       id: nextId++, ticker: pos.ticker, type: pos.type || (isCsp ? 'Put' : 'Call'),
       strike: newStrike, expiry: e, qty: pos.qty, entry: newEntry, mark: newEntry,
       note: pos.note ? `${pos.note} (rolled from $${pos.strike} ${pos.expiry})` : `rolled from $${pos.strike} ${pos.expiry}`,
-      opened: new Date().toISOString().slice(0,10)
+      opened: todayStr()
     };
     list.push(newPos);
     setListFor(listName, list);
@@ -1862,7 +1848,7 @@
       recentTrades.push({
         ticker: pos.ticker, type: 'Shares', strike: 0, expiry: pos.expiry, qty: pos.qty,
         entry: pos.strike, exit: settlement,
-        closedOn: new Date().toISOString().slice(0,10),
+        closedOn: todayStr(),
         status: 'assigned', kind: 'assign_shares', pnl: shareIntrinsic
       });
     }
@@ -1906,7 +1892,7 @@
       recentTrades.push({
         ticker: pos.ticker, type: 'Shares', strike: 0, expiry: pos.expiry, qty: sharesConsumed / 100,
         entry: avgBasis, exit: pos.strike,
-        closedOn: new Date().toISOString().slice(0,10),
+        closedOn: todayStr(),
         status: 'called_away', kind: 'called_shares', pnl: shareGain
       });
     }
@@ -1948,19 +1934,19 @@
     });
   }
 
-  document.getElementById('long-opened').value = new Date().toISOString().slice(0,10);
+  document.getElementById('long-opened').value = todayStr();
   wireAddForm('long-add-toggle','long-add-panel','long-add-confirm','long-add-error',
     [['ticker','long-ticker','text'],['type','long-type','select'],['strike','long-strike','num'],
      ['opened','long-opened','date'],['expiry','long-expiry','date'],['qty','long-qty','qty'],['entry','long-entry','num']],
     v => { longs.push({ id: nextId++, ticker:v.ticker, type:v.type, strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened:v.opened }); });
 
-  document.getElementById('csp-opened').value = new Date().toISOString().slice(0,10);
+  document.getElementById('csp-opened').value = todayStr();
   wireAddForm('csp-add-toggle','csp-add-panel','csp-add-confirm','csp-add-error',
     [['ticker','csp-ticker','text'],['strike','csp-strike','num'],
      ['opened','csp-opened','date'],['expiry','csp-expiry','date'],['qty','csp-qty','qty'],['entry','csp-entry','num']],
     v => { csps.push({ id: nextId++, ticker:v.ticker, type:'Put', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened:v.opened }); });
 
-  document.getElementById('cc-opened').value = new Date().toISOString().slice(0,10);
+  document.getElementById('cc-opened').value = todayStr();
   wireAddForm('cc-add-toggle','cc-add-panel','cc-add-confirm','cc-add-error',
     [['ticker','cc-ticker','text'],['strike','cc-strike','num'],
      ['opened','cc-opened','date'],['expiry','cc-expiry','date'],['qty','cc-qty','qty'],['entry','cc-entry','num']],
@@ -1970,7 +1956,7 @@
     [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
     v => { shareLots.push({ id: nextId++, ticker:v.ticker, shares:v.shares, basis:v.basis, source:'manual' }); });
 
-  document.getElementById('div-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('div-date').value = todayStr();
   wireAddForm('div-add-toggle','div-add-panel','div-add-confirm','div-add-error',
     [['date','div-date','date'],['source','div-source','opt'],['amount','div-amount','num']],
     v => { dividends.push({ id: nextId++, date:v.date, source:v.source, amount:v.amount }); });
@@ -1989,7 +1975,7 @@
       return;
     }
     errEl.style.display = 'none';
-    watchlist.push({ id: nextId++, ticker, note, target, added: new Date().toISOString().slice(0,10) });
+    watchlist.push({ id: nextId++, ticker, note, target, added: todayStr() });
     document.getElementById('watch-ticker').value = '';
     document.getElementById('watch-note').value = '';
     document.getElementById('watch-target').value = '';
@@ -2006,15 +1992,16 @@
   }
 
   async function fetchQuoteNetwork(symbol){
-    if (rateLimited) return { error:'rate-limit' };
+    if (Date.now() < rateLimitedUntil) return { error:'rate-limit' };
     const url = `${API_BASE}?symbol=${encodeURIComponent(symbol)}&token=${API_KEY}`;
     bumpUsage();
     try{
       const resp = await fetch(url);
+      if (resp.status === 429){ rateLimitedUntil = Date.now() + 60000; return { error:'rate-limit' }; }
       if (!resp.ok) return { error:'http-'+resp.status };
       const data = await resp.json();
-      if (data['error']){ rateLimited = true; return { error:'rate-limit' }; }
-      if (data['c'] === null || data['c'] === 0) return { error:'invalid-symbol' };
+      if (data['error']){ rateLimitedUntil = Date.now() + 60000; return { error:'rate-limit' }; }
+      if (!data['c']) return { error:'invalid-symbol' };
       return { price: data['c'], change: data['d'], changePct: data['dp'] };
     } catch(err){ return { error:'network' }; }
   }
@@ -2058,7 +2045,7 @@
     isUpdating = true;
     const btn = document.getElementById('refresh-quotes');
     btn.disabled = true;
-    if (force) { quoteCache.clear(); rateLimited = false; }
+    if (force) { quoteCache.clear(); rateLimitedUntil = 0; }
 
     const tickers = [...new Set([...allTickers(), ...shareLots.map(l => l.ticker)])];
     let usedNetwork = false;
@@ -2066,21 +2053,21 @@
 
     for (const ticker of tickers){
       const cached = !force && quoteCache.get(ticker);
-      const fresh = cached && (Date.now() - cached.t < CACHE_TTL_MS);
+      const fresh = cached && (Date.now() - cached.t < (cached.error ? 120000 : CACHE_TTL_MS));
       let result;
       if (fresh){ result = cached; fromCacheCount++; }
       else {
         if (usedNetwork) await sleep(CALL_GAP_MS);
         result = await fetchQuoteNetwork(ticker);
         usedNetwork = true;
-        if (result && result.price != null) quoteCache.set(ticker, { t: Date.now(), ...result });
+        if (result && result.error !== 'rate-limit') quoteCache.set(ticker, { t: Date.now(), ...result });
       }
       applyQuote(ticker, result);
     }
 
     const stamp = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
     const stampEl = document.getElementById('timestamp');
-    if (rateLimited){
+    if (Date.now() < rateLimitedUntil){
       stampEl.textContent = `${stamp} — rate limited (Finnhub free tier caps at 60/min). Click refresh to retry.`;
     } else {
       stampEl.textContent = fromCacheCount === tickers.length && tickers.length ? `${stamp} (cached)` : stamp;
@@ -2124,7 +2111,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `options-journal-trades-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `options-journal-trades-${todayStr()}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -2151,7 +2138,8 @@
     recentTrades = Array.isArray(data.recentTrades) ? data.recentTrades : [];
     watchlist = Array.isArray(data.watchlist) ? data.watchlist : [];
     equityHistory = Array.isArray(data.equityHistory) ? data.equityHistory : [];
-    nextId = typeof data.nextId === 'number' ? data.nextId : nextId;
+    const maxId = Math.max(0, ...[...longs, ...csps, ...ccs, ...shareLots, ...dividends, ...watchlist].map(x => x.id || 0));
+    nextId = Math.max(typeof data.nextId === 'number' ? data.nextId : 0, maxId + 1, 100);
     quoteCache.clear();
     renderAll();
   }
@@ -2161,7 +2149,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `options-journal-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `options-journal-${todayStr()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -2197,30 +2185,25 @@
   (async function init(){
     const el = document.getElementById('autosave-status');
     if (el) el.textContent = 'connecting…';
-
-    const cloudData = await cloudLoad();
-    if (cloudData){
-      applyState(cloudData);
-      if (el) el.textContent = 'loaded from cloud';
-      return;
+    const cloud = await cloudLoad();
+    if (cloud.ok){
+      cloudReady = true;
+      if (cloud.data){
+        applyState(cloud.data);
+        if (el) el.textContent = 'loaded from cloud';
+        return;
+      }
     }
-
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw){
         applyState(JSON.parse(raw));
-        if (el) el.textContent = 'loaded from local cache';
-        cloudSave();
+        if (el) el.textContent = cloud.ok ? 'loaded from local cache' : 'cloud unreachable, local only';
         return;
       }
     } catch(e){ /* storage blocked */ }
-
     renderAll();
-    if (el) el.textContent === undefined || el.textContent === 'connecting…'
-      ? (el.textContent = JSONBIN_KEY === 'PASTE_YOUR_MASTER_KEY_HERE'
-          ? 'local only — set JSONBIN_KEY to sync'
-          : 'ready')
-      : null;
+    if (el) el.textContent = cloud.ok ? 'ready' : 'cloud unreachable, local only';
   })();
 </script>
 </body>
