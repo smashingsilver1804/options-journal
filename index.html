@@ -84,6 +84,10 @@
   .status-row.st-expired .status-dot{color:var(--silver-faint);}
   .status-row.st-assigned .status-dot{color:var(--white);}
   .status-row.st-called_away .status-dot{color:var(--white);}
+  .status-row.st-sold .status-dot{color:var(--white);}
+  .add-grid.stocks{grid-template-columns:repeat(4,1fr) auto;}
+  .stock-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;}
+  .cov-tag{font-family:var(--sans);font-size:10.5px;color:var(--silver-faint);border:1px solid var(--line);border-radius:2px;padding:1px 6px;white-space:nowrap;}
   .status-row.st-watching .status-dot{color:var(--silver);}
 
   .mark-cell{cursor:text;border-bottom:1px dotted var(--silver-faint);}
@@ -172,7 +176,7 @@
   @media (max-width:720px){
     .ledger{flex-wrap:wrap;}
     .ledger-item{flex:1 1 50%;border-bottom:1px solid var(--line);}
-    .add-grid,.add-grid.lots,.add-grid.seven{grid-template-columns:1fr 1fr;}
+    .add-grid,.add-grid.lots,.add-grid.seven,.add-grid.stocks{grid-template-columns:1fr 1fr;}
     table,thead,tbody,tr{display:block;}
     thead{display:none;}
     tbody tr{border-bottom:1px solid var(--line);padding:10px 0;}
@@ -466,23 +470,38 @@
     <div class="add-error" id="csp-add-error">Fill in ticker, strike, opened, expiry, qty and premium.</div>
   </div>
 
+  <!-- ============ STOCKS ============ -->
+  <div class="section-head">
+    <span class="tick"></span><h2>Stocks</h2><span class="tag">held</span>
+    <span class="count" id="stock-count-label"></span>
+  </div>
+  <div class="section-note">Shares you own — added by hand or from an assigned put. Sell covered calls against them, or sell the shares. Called-away shares leave automatically.</div>
+  <div class="table-frame">
+    <table id="stock-table">
+      <thead><tr>
+        <th>Ticker</th><th>Shares</th><th>Cost basis</th><th>Market</th><th>Value</th><th>P&amp;L</th><th>Covered</th><th>Source</th><th></th>
+      </tr></thead>
+      <tbody id="stock-body"></tbody>
+    </table>
+  </div>
+  <div class="add-toggle"><button class="btn" id="lot-add-toggle">+ add stock</button></div>
+  <div class="add-panel" id="lot-add-panel">
+    <div class="add-grid stocks">
+      <div class="field"><label>Ticker</label><input id="lot-ticker" placeholder="AAPL" maxlength="8"></div>
+      <div class="field"><label>Shares</label><input id="lot-shares" type="number" step="1" placeholder="100"></div>
+      <div class="field"><label>Cost basis / share</label><input id="lot-basis" type="number" step="0.01" placeholder="94.30"></div>
+      <div class="field"><label>Bought (optional)</label><input id="lot-bought" type="date"></div>
+      <div class="field"><button class="btn primary" id="lot-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
+    </div>
+    <div class="add-error" id="lot-add-error">Fill in ticker, shares and cost basis.</div>
+  </div>
+
   <!-- ============ COVERED CALLS ============ -->
   <div class="section-head">
     <span class="tick"></span><h2>Covered calls</h2><span class="tag">sold</span>
     <span class="count" id="cc-count-label"></span>
   </div>
-  <div class="section-note">Share lots — from assignment or added manually. Sell a covered call against shares you hold here.</div>
-  <div class="lots-panel" id="lots-panel"></div>
-  <div class="add-toggle"><button class="btn" id="lot-add-toggle">+ add share lot</button></div>
-  <div class="add-panel" id="lot-add-panel">
-    <div class="add-grid lots">
-      <div class="field"><label>Ticker</label><input id="lot-ticker" placeholder="AAPL" maxlength="8"></div>
-      <div class="field"><label>Shares</label><input id="lot-shares" type="number" step="1" placeholder="100"></div>
-      <div class="field"><label>Cost basis / share</label><input id="lot-basis" type="number" step="0.01" placeholder="94.30"></div>
-      <div class="field"><button class="btn primary" id="lot-add-confirm" style="width:100%;padding:7px 8px;">Add</button></div>
-    </div>
-    <div class="add-error" id="lot-add-error">Fill in ticker, shares and cost basis.</div>
-  </div>
+  <div class="section-note">Calls sold against shares in Stocks above. Use "sell covered call" on a stock row to pre-fill the form.</div>
 
   <div class="table-frame">
     <table id="cc-table">
@@ -687,7 +706,7 @@
   }
 
   function tradePnl(t){
-    if (t.kind === 'assign_shares' || t.kind === 'called_shares'){
+    if (t.kind === 'assign_shares' || t.kind === 'called_shares' || t.kind === 'sold_shares'){
       return typeof t.pnl === 'number' ? t.pnl : 0;
     }
     if (typeof t.pnl === 'number'){
@@ -700,7 +719,7 @@
   }
 
   function tradeFees(t){
-    if (t.kind === 'assign_shares' || t.kind === 'called_shares') return 0;
+    if (t.kind === 'assign_shares' || t.kind === 'called_shares' || t.kind === 'sold_shares') return 0;
     return legFee(t.qty) + feeForClose(t.status, t.exit, t.kind) * legFee(t.qty);
   }
 
@@ -789,30 +808,95 @@
   }
 
   function renderLots(){
-    const panel = document.getElementById('lots-panel');
+    const body = document.getElementById('stock-body');
+    const totalSh = shareLots.reduce((a,l) => a + l.shares, 0);
+    document.getElementById('stock-count-label').textContent =
+      shareLots.length + ' lot' + (shareLots.length===1?'':'s') + (totalSh ? ' · ' + totalSh + ' sh' : '');
     if (shareLots.length === 0){
-      panel.innerHTML = `<div class="lot-row"><span class="ls">No share lots yet — assign a put or add one manually.</span></div>`;
+      body.innerHTML = `<tr class="empty-row"><td colspan="9">No stocks yet — add one, or assign a put.</td></tr>`;
       return;
     }
-    panel.innerHTML = shareLots.map(l => {
+    // allocate open covered-call shares to lots, in lot order, per ticker
+    const callShares = new Map();
+    ccs.forEach(c => callShares.set(c.ticker, (callShares.get(c.ticker)||0) + c.qty*100));
+    body.innerHTML = shareLots.map(l => {
+      const left = callShares.get(l.ticker) || 0;
+      const cov = Math.min(left, l.shares);
+      callShares.set(l.ticker, left - cov);
       const q = getQuotePrice(l.ticker);
-      const mktLabel = q != null ? ` · mkt $${q.toFixed(2)}` : '';
-      const unreal = q != null ? (q - l.basis) * l.shares : 0;
-      const unrealLabel = q != null ? ` · <span class="pnl ${pnlClass(unreal)}">${formatMoney(unreal)}</span>` : '';
-      return `
-      <div class="lot-row">
-        <span class="lt">${l.ticker}</span>
-        <span class="ls">${l.shares} sh · cost basis $${l.basis.toFixed(2)}${mktLabel}${unrealLabel}</span>
-        <span class="src">${l.source}</span>
-        <button class="btn danger ghost lot-del-btn" data-id="${l.id}" style="margin:0;">remove</button>
-      </div>`;
+      const value = q != null ? q * l.shares : null;
+      const unreal = q != null ? (q - l.basis) * l.shares : null;
+      const covLabel = cov > 0 ? `<span class="cov-tag">${cov}/${l.shares} sh</span>` : '—';
+      const boughtSub = l.bought ? `<span class="contract-sub">bought ${formatDate(l.bought)}</span>` : '';
+      return `<tr>
+        <td data-label="Ticker"><span class="ticker">${l.ticker}</span>${boughtSub}</td>
+        <td data-label="Shares">${l.shares}</td>
+        <td data-label="Cost basis">$${l.basis.toFixed(2)}</td>
+        <td data-label="Market">${q != null ? '$' + q.toFixed(2) : '—'}</td>
+        <td data-label="Value">${value != null ? formatPlain(value) : '—'}</td>
+        <td data-label="P&L">${unreal != null ? `<span class="pnl ${pnlClass(unreal)}">${formatMoney(unreal)}</span>` : '—'}</td>
+        <td data-label="Covered">${covLabel}</td>
+        <td data-label="Source"><span class="src" style="font-family:var(--sans);font-size:10.5px;color:var(--silver-faint);border:1px solid var(--line);border-radius:2px;padding:1px 6px;">${l.source}</span></td>
+        <td><div class="stock-actions">
+          <button class="btn stock-cc-btn" data-id="${l.id}">sell covered call</button>
+          <button class="btn stock-sell-btn" data-id="${l.id}">sell shares</button>
+          <button class="btn danger ghost stock-del-btn" data-id="${l.id}" style="margin:0;">remove</button>
+        </div></td>
+      </tr>`;
     }).join('');
-    panel.querySelectorAll('.lot-del-btn').forEach(el => {
+    body.querySelectorAll('.stock-cc-btn').forEach(el => el.addEventListener('click', () => stockSellCall(parseInt(el.dataset.id))));
+    body.querySelectorAll('.stock-sell-btn').forEach(el => el.addEventListener('click', () => sellShares(parseInt(el.dataset.id))));
+    body.querySelectorAll('.stock-del-btn').forEach(el => {
       el.addEventListener('click', () => {
-        shareLots = shareLots.filter(l => l.id !== parseInt(el.dataset.id));
+        const lot = shareLots.find(l => l.id === parseInt(el.dataset.id));
+        if (!lot) return;
+        if (!confirm(`Remove ${lot.shares} ${lot.ticker} shares from Stocks?\n\nThis just deletes the lot (no trade is booked). Use "sell shares" to book a sale.`)) return;
+        shareLots = shareLots.filter(l => l.id !== lot.id);
         renderAll();
       });
     });
+  }
+
+  function stockSellCall(id){
+    const lot = shareLots.find(l => l.id === id);
+    if (!lot) return;
+    prefillAddForm('cc', lot.ticker);
+    const held = shareLots.filter(l => l.ticker === lot.ticker).reduce((a,l) => a + l.shares, 0);
+    const covered = ccs.filter(c => c.ticker === lot.ticker).reduce((a,c) => a + c.qty*100, 0);
+    const free = Math.floor(Math.max(0, held - covered) / 100);
+    if (free > 0) document.getElementById('cc-qty').value = free;
+  }
+
+  function sellShares(id){
+    const lot = shareLots.find(l => l.id === id);
+    if (!lot) return;
+    const qRaw = prompt(`Sell how many ${lot.ticker} shares? (you hold ${lot.shares} in this lot)`, String(lot.shares));
+    if (qRaw === null) return;
+    const shares = Math.floor(parseFloat(qRaw));
+    if (isNaN(shares) || shares <= 0 || shares > lot.shares){ alert(`Enter a share count between 1 and ${lot.shares}.`); return; }
+    const mkt = getQuotePrice(lot.ticker);
+    const pRaw = prompt(`Sale price per share for ${lot.ticker}?`, mkt != null ? mkt.toFixed(2) : lot.basis.toFixed(2));
+    if (pRaw === null) return;
+    const price = parseFloat(pRaw);
+    if (isNaN(price) || price < 0){ alert('Enter a valid sale price.'); return; }
+
+    const heldTotal = shareLots.filter(l => l.ticker === lot.ticker).reduce((a,l) => a + l.shares, 0);
+    const coveredSh = ccs.filter(c => c.ticker === lot.ticker).reduce((a,c) => a + c.qty*100, 0);
+    if (coveredSh > 0 && heldTotal - shares < coveredSh){
+      if (!confirm(`${lot.ticker}: after this sale you'd hold ${heldTotal - shares} shares but have ${coveredSh} shares covered by open calls.\n\nSell anyway? The calls would be left uncovered.`)) return;
+    }
+    const pnl = (price - lot.basis) * shares;
+    if (!confirm(`Sell ${shares} ${lot.ticker} at $${price.toFixed(2)}?\n\nCost basis $${lot.basis.toFixed(2)} → P&L ${formatMoney(pnl)}.`)) return;
+
+    recentTrades.push({
+      ticker: lot.ticker, type: 'Shares', strike: 0, expiry: todayStr(), qty: shares / 100,
+      entry: lot.basis, exit: price, closedOn: todayStr(),
+      status: 'sold', kind: 'sold_shares', pnl
+    });
+    shareLots = shareLots
+      .map(l => l.id === lot.id ? { ...l, shares: l.shares - shares } : l)
+      .filter(l => l.shares > 0);
+    renderAll();
   }
 
   // ================= WATCHLIST =================
@@ -906,7 +990,8 @@
       csp:'Cash-secured put',
       cc:'Covered call',
       assign_shares:'Assigned shares',
-      called_shares:'Called-away shares'
+      called_shares:'Called-away shares',
+      sold_shares:'Sold shares'
     }[kind] || kind;
   }
 
@@ -921,7 +1006,7 @@
       const pnl = tradePnl(t);
       const typeLabel = t.type || '';
       const strikeLabel = (typeof t.strike === 'number' && t.strike > 0) ? `$${t.strike.toFixed(2)}` : '—';
-      const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares';
+      const isShare = t.kind === 'assign_shares' || t.kind === 'called_shares' || t.kind === 'sold_shares';
       const fees = tradeFees(t);
       const feeLabel = isShare ? '—' : `$${fees.toFixed(2)}`;
       return `<tr>
@@ -2012,7 +2097,7 @@
       });
     }
 
-    shareLots.push({ id: nextId++, ticker: pos.ticker, shares, basis: settlement, source: 'assigned' });
+    shareLots.push({ id: nextId++, ticker: pos.ticker, shares, basis: settlement, source: 'assigned', bought: todayStr() });
     renderAll();
   }
 
@@ -2112,8 +2197,8 @@
     v => { ccs.push({ id: nextId++, ticker:v.ticker, type:'Call', strike:v.strike, expiry:v.expiry, qty:v.qty, entry:v.entry, mark:v.entry, note:'', opened:v.opened }); });
 
   wireAddForm('lot-add-toggle','lot-add-panel','lot-add-confirm','lot-add-error',
-    [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num']],
-    v => { shareLots.push({ id: nextId++, ticker:v.ticker, shares:v.shares, basis:v.basis, source:'manual' }); });
+    [['ticker','lot-ticker','text'],['shares','lot-shares','qty'],['basis','lot-basis','num'],['bought','lot-bought','opt']],
+    v => { shareLots.push({ id: nextId++, ticker:v.ticker, shares:v.shares, basis:v.basis, source:'manual', bought: v.bought || '' }); });
 
   document.getElementById('div-date').value = todayStr();
   wireAddForm('div-add-toggle','div-add-panel','div-add-confirm','div-add-error',
@@ -2369,4 +2454,3 @@
 </script>
 </body>
 </html>
-
