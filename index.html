@@ -830,8 +830,8 @@
       const boughtSub = l.bought ? `<span class="contract-sub">bought ${formatDate(l.bought)}</span>` : '';
       return `<tr>
         <td data-label="Ticker"><span class="ticker">${l.ticker}</span>${boughtSub}</td>
-        <td data-label="Shares">${l.shares}</td>
-        <td data-label="Cost basis">$${l.basis.toFixed(2)}</td>
+        <td data-label="Shares"><span class="stock-edit" data-id="${l.id}" data-field="shares" title="click to edit" style="cursor:text;border-bottom:1px dotted var(--silver-faint);">${l.shares}</span></td>
+        <td data-label="Cost basis"><span class="stock-edit" data-id="${l.id}" data-field="basis" title="click to edit" style="cursor:text;border-bottom:1px dotted var(--silver-faint);">$${l.basis.toFixed(2)}</span></td>
         <td data-label="Market">${q != null ? '$' + q.toFixed(2) : '—'}</td>
         <td data-label="Value">${value != null ? formatPlain(value) : '—'}</td>
         <td data-label="P&L">${unreal != null ? `<span class="pnl ${pnlClass(unreal)}">${formatMoney(unreal)}</span>` : '—'}</td>
@@ -844,6 +844,25 @@
         </div></td>
       </tr>`;
     }).join('');
+    body.querySelectorAll('.stock-edit').forEach(el => {
+      el.addEventListener('click', () => {
+        const lot = shareLots.find(l => l.id === parseInt(el.dataset.id));
+        if (!lot) return;
+        const field = el.dataset.field;
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = field === 'basis' ? '0.01' : '1';
+        input.value = lot[field];
+        input.style.cssText = 'width:84px;';
+        el.replaceWith(input);
+        input.focus(); input.select();
+        wireInlineEdit(input, v => {
+          const n = parseFloat(v);
+          if (isNaN(n) || n <= 0) return;
+          lot[field] = field === 'shares' ? Math.floor(n) : n;
+        }, el);
+      });
+    });
     body.querySelectorAll('.stock-cc-btn').forEach(el => el.addEventListener('click', () => stockSellCall(parseInt(el.dataset.id))));
     body.querySelectorAll('.stock-sell-btn').forEach(el => el.addEventListener('click', () => sellShares(parseInt(el.dataset.id))));
     body.querySelectorAll('.stock-del-btn').forEach(el => {
